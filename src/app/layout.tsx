@@ -1,8 +1,10 @@
-import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
-import { Inter } from 'next/font/google';
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import { Inter } from "next/font/google";
 
-import './globals.css';
+import { AppShell } from "@/components/layout/app-shell";
+
+import "./globals.css";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -17,7 +19,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-neutral-50 text-neutral-900 antialiased`}>{children}</body>
+      <body className={`${inter.className} bg-background text-foreground antialiased`}>
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   );
 }
