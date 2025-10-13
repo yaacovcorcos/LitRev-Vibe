@@ -94,3 +94,4 @@ In CI, the same script runs via [`.github/workflows/ci.yml`](.github/workflows/c
 
 - Scaffold the application shell (Milestone 1 in `docs/planning/litrev-mvp-implementation-plan-v2.md`).
 - Add project-specific scripts (e.g., `format:check`, `lint`, `test`, `storybook:test`) once the codebase is initialized so the verification pipeline can enforce them automatically.
+# Test change
