@@ -14,3 +14,8 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Created layout components (`Sidebar`, `Header`, `CommandMenu`, `AppShell`) and navigation metadata.
 - Wrapped the Next.js App Router layout with `AppShell`; refreshed the home page content to fit the new shell container.
 - Result: Baseline global frame (sidebar/header) ready for Milestone 1 routes and interactions.
+### 2025-10-13 — Project CRUD API & Hooks
+- Added Prisma-backed REST routes for `/api/projects` (list/create/update/delete).
+- Introduced React Query provider and hooks (`useProjects`, `useCreateProject`, etc.) for client-side data access.
+- Updated documentation (Architecture, File Index) to capture new modules.
+

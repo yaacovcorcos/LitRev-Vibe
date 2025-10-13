@@ -7,15 +7,19 @@
 - **Design System (`src/lib/design-system/`)**: Authoritative tokens (`tokens.ts`) and theme adapters (`theme.ts`). Shared by Tailwind, shadcn/ui, Storybook, and export pipelines.
 - **UI Primitives (`src/components/ui/`)**: shadcn/ui generated components consuming shared tokens. Add new primitives via `pnpm dlx shadcn@latest add <component>`.
 - **Queue Infrastructure (`src/lib/queue/`)**: Redis connection helpers, queue definitions, and worker setup for resumable jobs. `src/scripts/run-worker.ts` boots a worker.
-- **Prisma Layer (`prisma/`)**: Database schema (`schema.prisma`), migrations, and seed data. Services will import generated client from `src/generated/prisma` (ignored in git).
+- **Prisma Layer (`prisma/`)**: Database schema (`schema.prisma`), migrations, seed data, and Prisma client wrapper (`src/lib/prisma.ts`).
+- **API Routes (`src/app/api/projects`)**: REST endpoints providing project CRUD backed by Prisma.
+- **Client Hooks (`src/hooks/use-projects.ts`)**: React Query hooks for fetching/mutating project data.
 - **Storybook (`.storybook/`, `src/stories/`)**: Visual documentation of tokens and components. Stories must stay in sync with UI updates.
 - **Automation Scripts (`scripts/`)**: `agent-verify.sh` guardrails, additional automation will live here.
 
 ## Data Flow (Current)
 1. **Design tokens** feed Tailwind config, shadcn/ui components, and Storybook stories.
 2. **Next.js app** renders through `AppShell`, providing the persistent sidebar/header frame around routed pages.
-3. **Queue worker** connects to Redis using shared helper; sample heartbeat job verifies infrastructure.
-4. **Prisma** defines project/research plan/candidate/ledger schemas for upcoming modules.
+3. **React Query provider** supplies caching/invalidation for client hooks.
+4. **API routes** call Prisma via the shared client, enabling CRUD for projects.
+5. **Queue worker** connects to Redis using shared helper; sample heartbeat job verifies infrastructure.
+6. **Prisma** defines project/research plan/candidate/ledger schemas for upcoming modules.
 
 ## Planned Expansions
 - **tRPC / API Layer**: Will expose typed endpoints for project CRUD, planning, triage. Document routes under `docs/api/TRPC_ROUTES.md` (placeholder).
