@@ -3,6 +3,7 @@
 ## High-Level Modules
 
 - **App Shell (`src/app/`)**: Next.js App Router root (`layout.tsx`, `page.tsx`). Hosts global styles, fonts, and future routed pages (planning, triage, ledger, etc.).
+- **Layout Components (`src/components/layout/`)**: Sidebar, header, command menu, and `AppShell` wrapper used by the App Router layout.
 - **Design System (`src/lib/design-system/`)**: Authoritative tokens (`tokens.ts`) and theme adapters (`theme.ts`). Shared by Tailwind, shadcn/ui, Storybook, and export pipelines.
 - **UI Primitives (`src/components/ui/`)**: shadcn/ui generated components consuming shared tokens. Add new primitives via `pnpm dlx shadcn@latest add <component>`.
 - **Queue Infrastructure (`src/lib/queue/`)**: Redis connection helpers, queue definitions, and worker setup for resumable jobs. `src/scripts/run-worker.ts` boots a worker.
@@ -12,7 +13,7 @@
 
 ## Data Flow (Current)
 1. **Design tokens** feed Tailwind config, shadcn/ui components, and Storybook stories.
-2. **Next.js app** renders static landing page (placeholder) leveraging Tailwind and tokens.
+2. **Next.js app** renders through `AppShell`, providing the persistent sidebar/header frame around routed pages.
 3. **Queue worker** connects to Redis using shared helper; sample heartbeat job verifies infrastructure.
 4. **Prisma** defines project/research plan/candidate/ledger schemas for upcoming modules.
 

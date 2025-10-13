@@ -23,9 +23,11 @@ Quick reference for navigating the repository. Update this index whenever new to
 
 ## Source (`src/`)
 - `app/` — Next.js App Router entry points (`layout.tsx`, `page.tsx`, global styles).
+- `components/layout/` — Workspace shell primitives (sidebar, header, command menu, app shell).
 - `components/ui/` — shadcn/ui generated primitives (e.g., `button.tsx`).
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
+- `lib/navigation.ts` — Navigation metadata powering the shell.
 - `lib/utils.ts` — Shared utility helpers (`cn()`).
 - `scripts/` — Runtime scripts (`run-worker.ts`).
 - `stories/` — Storybook stories (design tokens, examples).

@@ -9,3 +9,8 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Established guardrails: `scripts/agent-verify.sh`, `.env.example`, GitHub CI workflow, documentation updates in README.
 - Organized specs and planning docs under `docs/specs/` and `docs/planning/`.
 - Outcome: Milestone 0 complete; project ready for Milestone 1 (app shell, planning UX).
+
+### 2025-10-13 — Workspace Shell Integration
+- Created layout components (`Sidebar`, `Header`, `CommandMenu`, `AppShell`) and navigation metadata.
+- Wrapped the Next.js App Router layout with `AppShell`; refreshed the home page content to fit the new shell container.
+- Result: Baseline global frame (sidebar/header) ready for Milestone 1 routes and interactions.
