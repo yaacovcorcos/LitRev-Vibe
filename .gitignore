@@ -1,0 +1,17 @@
+# Dependencies & build output
+node_modules/
+dist/
+.next/
+
+# Environment files
+.env
+.env.local
+
+# Prisma generated client
+src/generated/
+
+# Misc
+.DS_Store
+*.log
+.pnpm-debug.log
+storybook-static/

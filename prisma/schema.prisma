@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  researchPlans ResearchPlan[]
+  candidates    Candidate[]
+  ledgerEntries LedgerEntry[]
+  draftSections DraftSection[]
+  jobs          Job[]
+  activityLog   ActivityLog[]
+  exports       Export[]
+}
+
+model ResearchPlan {
+  id            String   @id @default(cuid())
+  projectId     String
+  scope         Json
+  queryStrategy Json
+  targetSources String[]
+  outline       Json
+  status        String   @default("draft")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Candidate {
+  id              String   @id @default(cuid())
+  projectId       String
+  searchAdapter   String
+  externalIds     Json
+  metadata        Json
+  integrityFlags  Json?
+  oaLinks         Json?
+  triageStatus    String   @default("pending")
+  aiRationale     Json?
+  locatorSnippets Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ledger  LedgerEntry?
+}
+
+model LedgerEntry {
+  id              String   @id @default(cuid())
+  projectId       String
+  citationKey     String
+  metadata        Json
+  provenance      Json
+  locators        Json
+  integrityNotes  Json?
+  importedFrom    String?
+  keptAt          DateTime
+  verifiedByHuman Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project     Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  candidate   Candidate?             @relation(fields: [candidateId], references: [id])
+  candidateId String?                @unique
+  citations   DraftSectionOnLedger[]
+}
+
+model DraftSection {
+  id          String    @id @default(cuid())
+  projectId   String
+  sectionType String
+  content     Json
+  status      String    @default("draft")
+  version     Int       @default(1)
+  approvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  citations DraftSectionOnLedger[]
+}
+
+model DraftSectionOnLedger {
+  draftSectionId String
+  ledgerEntryId  String
+
+  locator Json
+
+  draftSection DraftSection @relation(fields: [draftSectionId], references: [id], onDelete: Cascade)
+  ledgerEntry  LedgerEntry  @relation(fields: [ledgerEntryId], references: [id], onDelete: Cascade)
+
+  @@id([draftSectionId, ledgerEntryId])
+}
+
+model Job {
+  id             String    @id @default(cuid())
+  projectId      String
+  jobType        String
+  status         String
+  progress       Float?    @default(0)
+  logs           Json?
+  resumableState Json?
+  workerId       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  completedAt    DateTime?
+
+  project Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Export  Export[]
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  projectId String
+  actor     String   @default("system")
+  action    String
+  payload   Json?
+  createdAt DateTime @default(now())
+  undoRef   String?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Export {
+  id        String   @id @default(cuid())
+  projectId String
+  format    String
+  options   Json?
+  filePath  String?
+  jobId     String?
+  createdAt DateTime @default(now())
+  createdBy String?  @default("system")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  job     Job?    @relation(fields: [jobId], references: [id])
+}
