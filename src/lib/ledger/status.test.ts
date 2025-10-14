@@ -37,5 +37,11 @@ describe("getLocatorStatusDisplay", () => {
       badgeVariant: "default",
       tone: "success",
     });
+
+    // Fallback to pending locator when an unknown status is provided
+    expect(getLocatorStatusDisplay("unknown" as LocatorStatus)).toMatchObject({
+      label: "Pending locator",
+      tone: "danger",
+    });
   });
 });

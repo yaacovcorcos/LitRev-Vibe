@@ -56,5 +56,5 @@ const DISPLAY_MAP: Record<LocatorStatus, LocatorStatusDisplay> = {
 };
 
 export function getLocatorStatusDisplay(status: LocatorStatus): LocatorStatusDisplay {
-  return DISPLAY_MAP[status];
+  return DISPLAY_MAP[status] ?? DISPLAY_MAP.pending_locator;
 }

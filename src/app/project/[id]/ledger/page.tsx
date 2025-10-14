@@ -734,33 +734,34 @@ function VerifyButton({ entryId, page, pageSize }: VerifyButtonProps) {
   );
 }
 
+const BADGE_CLASS_MAP: Record<LocatorStatusTone, string> = {
+  danger: "border-destructive/40 text-destructive",
+  warning: "border-amber-300 text-amber-700",
+  success: "border-primary/40 text-primary",
+};
+
+const INSPECTOR_CLASS_MAP: Record<LocatorStatusTone, { container: string; title: string; body: string }> = {
+  danger: {
+    container: "mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive",
+    title: "font-semibold uppercase tracking-wide",
+    body: "text-destructive/80",
+  },
+  warning: {
+    container: "mt-3 space-y-2 rounded-md border border-amber-300/70 bg-amber-100/60 p-3 text-xs text-amber-700",
+    title: "font-semibold uppercase tracking-wide",
+    body: "text-amber-700",
+  },
+  success: {
+    container: "mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground/80",
+    title: "font-semibold uppercase tracking-wide text-primary",
+    body: "text-primary-foreground/70",
+  },
+};
+
 function getLocatorBadgeClasses(tone: LocatorStatusTone) {
-  return cn("uppercase text-[11px]", {
-    "border-amber-300 text-amber-700": tone === "warning",
-    "border-destructive/40 text-destructive": tone === "danger",
-  });
+  return cn("uppercase text-[11px]", BADGE_CLASS_MAP[tone] ?? BADGE_CLASS_MAP.danger);
 }
 
 function getInspectorBannerClasses(tone: LocatorStatusTone) {
-  switch (tone) {
-    case "warning":
-      return {
-        container: "mt-3 space-y-2 rounded-md border border-amber-300/70 bg-amber-100/60 p-3 text-xs text-amber-700",
-        title: "font-semibold uppercase tracking-wide",
-        body: "text-amber-700",
-      };
-    case "success":
-      return {
-        container: "mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground/80",
-        title: "font-semibold uppercase tracking-wide text-primary",
-        body: "text-primary-foreground/70",
-      };
-    case "danger":
-    default:
-      return {
-        container: "mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive",
-        title: "font-semibold uppercase tracking-wide",
-        body: "text-destructive/80",
-      };
-  }
+  return INSPECTOR_CLASS_MAP[tone] ?? INSPECTOR_CLASS_MAP.danger;
 }
