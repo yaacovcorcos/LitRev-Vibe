@@ -33,6 +33,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-candidate-rationale.ts` — React Query helpers for fetching and asking AI about a candidate.
 - `hooks/use-keep-candidate.ts` — Mutation helper for enforcing locator requirement before keeping to ledger.
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
+- `lib/integrity/` — Integrity feed ingestion stubs and helpers.
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
 - `lib/ai/` — AI orchestration helpers (triage rationale + Ask-AI stubs with rate limiting).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
@@ -46,6 +47,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 
 ## Scripts & Config
 - `scripts/agent-verify.sh` — Lint/test/storybook guardrail script for AI agents.
+- `scripts/ingest-integrity-feeds.ts` — Placeholder ingestion runner for Retraction Watch + DOAJ feeds.
 - `.github/workflows/ci.yml` — GitHub Actions workflow invoking agent verify.
 
 ## Data & Migrations

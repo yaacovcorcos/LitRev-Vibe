@@ -456,13 +456,36 @@ export default function LedgerPage() {
                   </form>
                 </InspectorSection>
                 <InspectorSection title="Integrity notes">
-                  {selectedEntry.integrityNotes ? (
-                    <pre className="overflow-x-auto rounded bg-muted/50 p-3 text-xs text-foreground/90">
-                      {JSON.stringify(selectedEntry.integrityNotes, null, 2)}
-                    </pre>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No integrity notes recorded.</p>
-                  )}
+                  {(() => {
+                    const parsedFlags = parseIntegrityNotes(selectedEntry.integrityNotes);
+                    if (parsedFlags.length === 0) {
+                      return <p className="text-sm text-muted-foreground">No integrity notes recorded.</p>;
+                    }
+
+                    return (
+                      <ul className="space-y-2 text-sm">
+                        {parsedFlags.map((flag, index) => (
+                          <li
+                            key={`${flag.source}-${flag.label}-${index}`}
+                            className={cn(
+                              "rounded border p-3",
+                              flag.severity === "critical"
+                                ? "border-destructive/40 bg-destructive/10 text-destructive"
+                                : flag.severity === "warning"
+                                  ? "border-amber-300/70 bg-amber-100/60 text-amber-800"
+                                  : "border-muted-foreground/30 bg-muted/30 text-muted-foreground",
+                            )}
+                          >
+                            <p className="text-xs font-semibold uppercase tracking-wide">
+                              {flag.label}
+                              <span className="ml-2 text-[10px] capitalize text-muted-foreground/70">{flag.source}</span>
+                            </p>
+                            {flag.reason ? <p className="text-xs text-foreground/80">{flag.reason}</p> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })()}
                 </InspectorSection>
                 <InspectorSection title="Provenance">
                   <pre className="overflow-x-auto rounded bg-muted/50 p-3 text-xs text-foreground/90">
@@ -617,6 +640,46 @@ function LocatorSummary({ locator }: LocatorSummaryProps) {
       {source ? <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Source: {source}</p> : null}
     </div>
   );
+}
+
+type IntegrityFlag = {
+  label: string;
+  severity: "critical" | "warning" | "info";
+  source: string;
+  reason?: string;
+};
+
+function parseIntegrityNotes(value: unknown): IntegrityFlag[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const label = typeof record.label === "string" ? record.label : null;
+      const severityRaw = typeof record.severity === "string" ? record.severity : null;
+      const source = typeof record.source === "string" ? record.source : "unknown";
+      const reason = typeof record.reason === "string" ? record.reason : undefined;
+
+      if (!label || !severityRaw) {
+        return null;
+      }
+
+      const severity = severityRaw === "critical" || severityRaw === "warning" ? severityRaw : "info";
+
+      return {
+        label,
+        severity,
+        source,
+        reason,
+      } satisfies IntegrityFlag;
+    })
+    .filter((flag): flag is IntegrityFlag => flag !== null);
 }
 
 type LocatorFieldProps = {

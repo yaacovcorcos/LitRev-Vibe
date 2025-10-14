@@ -17,6 +17,7 @@
     "storybook:test": "pnpm exec storybook dev --ci --smoke-test",
     "worker": "pnpm exec ts-node --transpile-only src/scripts/run-worker.ts",
     "queue:smoke": "REDIS_URL=redis://localhost:6379 pnpm run worker",
+    "integrity:ingest": "pnpm exec ts-node --transpile-only src/scripts/ingest-integrity-feeds.ts",
     "storybook": "pnpm exec storybook dev -p 6006",
     "storybook:build": "pnpm exec storybook build",
     "chromatic": "if [ -z \"$CHROMATIC_PROJECT_TOKEN\" ]; then echo 'Chromatic token not set; skipping'; else pnpm exec chromatic --project-token=$CHROMATIC_PROJECT_TOKEN --exit-zero-on-changes; fi",
