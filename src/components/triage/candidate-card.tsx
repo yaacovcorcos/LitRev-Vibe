@@ -270,6 +270,7 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
               key={`${flag.source}-${flag.label}-${index}`}
               variant={flag.severity === "critical" ? "destructive" : flag.severity === "warning" ? "outline" : "secondary"}
               className="text-xs"
+              title={[flag.label, flag.source ? `Source: ${flag.source}` : null, flag.reason].filter(Boolean).join(" • ")}
             >
               {flag.label}
             </Badge>
@@ -370,6 +371,11 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
                 {snippetMutation.isPending ? "Enqueuing…" : "Refresh snippets"}
               </Button>
             </div>
+            {integrityFlags.length > 0 ? (
+              <p className="text-[11px] uppercase tracking-wide text-destructive">
+                Integrity flags present — review before keeping.
+              </p>
+            ) : null}
             {askResponse ? (
               <div className="space-y-3 rounded-md bg-muted/40 p-3 text-sm text-foreground/90">
                 <p>{askResponse.answer}</p>
