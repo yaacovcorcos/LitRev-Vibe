@@ -1,12 +1,307 @@
-import { composeJobQueuePayloadSchema } from "./jobs";
+import { Prisma } from "@/generated/prisma";
+import { logActivity } from "@/lib/activity-log";
+import { prisma } from "@/lib/prisma";
+import { updateJobRecord } from "@/lib/jobs";
+
+import { assertCitationsValid } from "./citation-validator";
+import {
+  type ComposeJobQueuePayload,
+  type ComposeJobState,
+  type ComposeSectionStatus,
+  composeJobQueuePayloadSchema,
+} from "./jobs";
 
 export type ComposeJobResult = {
   completedSections: number;
   totalSections: number;
 };
 
-export async function processComposeJob(data: unknown): Promise<ComposeJobResult> {
-  composeJobQueuePayloadSchema.parse(data);
+type LedgerEntryForCompose = {
+  id: string;
+  citationKey: string;
+  metadata: Prisma.JsonValue;
+  locators: Prisma.JsonValue;
+  verifiedByHuman: boolean;
+};
 
-  throw new Error("Compose job processor not implemented yet");
+export async function processComposeJob(data: unknown): Promise<ComposeJobResult> {
+  const payload = composeJobQueuePayloadSchema.parse(data);
+
+  const { jobId, projectId } = payload;
+  const totalSections = payload.sections.length;
+  const state = cloneState(payload.state);
+
+  try {
+    await updateJobRecord({
+      jobId,
+      status: "in_progress",
+      progress: 0,
+      resumableState: state,
+    });
+
+    let completedSections = 0;
+
+    for (let index = 0; index < payload.sections.length; index++) {
+      const sectionInput = payload.sections[index];
+      const sectionState = state.sections[index];
+      const nowIso = new Date().toISOString();
+
+      state.currentSectionIndex = index;
+      setSectionState(sectionState, "running", nowIso);
+      sectionState.attempts += 1;
+
+      await updateJobRecord({
+        jobId,
+        status: "in_progress",
+        progress: completedSections / totalSections,
+        resumableState: state,
+      });
+
+      const ledgerEntries = await fetchLedgerEntries(projectId, sectionInput.ledgerEntryIds);
+
+      validateCitations(sectionState.key, sectionInput.ledgerEntryIds, ledgerEntries);
+
+      const content = buildDraftContent(sectionInput.title, sectionInput.sectionType, payload.researchQuestion, payload.narrativeVoice, ledgerEntries);
+
+      const draftSection = await prisma.$transaction(async (tx) => {
+        const existing = sectionInput.sectionId
+          ? await tx.draftSection.findUnique({
+            where: { id: sectionInput.sectionId },
+          })
+          : null;
+
+        const sanitizedContent = toJson(content);
+
+        if (existing && existing.projectId !== projectId) {
+          throw new Error(`Draft section ${existing.id} does not belong to project ${projectId}`);
+        }
+
+        const record = existing
+          ? await tx.draftSection.update({
+            where: { id: existing.id },
+            data: {
+              content: sanitizedContent,
+              version: existing.version + 1,
+              status: "draft",
+              approvedAt: null,
+            },
+          })
+          : await tx.draftSection.create({
+            data: {
+              projectId,
+              sectionType: sectionInput.sectionType,
+              content: sanitizedContent,
+              status: "draft",
+              version: 1,
+            },
+          });
+
+        await tx.draftSectionOnLedger.deleteMany({
+          where: { draftSectionId: record.id },
+        });
+
+        await tx.draftSectionOnLedger.createMany({
+          data: ledgerEntries.map((entry) => ({
+            draftSectionId: record.id,
+            ledgerEntryId: entry.id,
+            locator: primaryLocator(entry) ?? Prisma.JsonNull,
+          })),
+        });
+
+        return record;
+      });
+
+      setSectionState(sectionState, "completed", new Date().toISOString());
+      sectionState.draftSectionId = draftSection.id;
+
+      completedSections += 1;
+
+      await logActivity({
+        projectId,
+        action: "draft.section_generated",
+        payload: {
+          jobId,
+          draftSectionId: draftSection.id,
+          sectionKey: sectionState.key,
+          sectionType: draftSection.sectionType,
+          ledgerEntryIds: ledgerEntries.map((entry) => entry.id),
+        },
+      });
+
+      const isFinalSection = completedSections === totalSections;
+
+      await updateJobRecord({
+        jobId,
+        status: isFinalSection ? "completed" : "in_progress",
+        progress: completedSections / totalSections,
+        resumableState: state,
+        ...(isFinalSection ? { completedAt: new Date() } : {}),
+      });
+    }
+
+    return {
+      completedSections,
+      totalSections,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const nowIso = new Date().toISOString();
+
+    if (typeof state.currentSectionIndex === "number") {
+      const current = state.sections[state.currentSectionIndex];
+      setSectionState(current, "failed", nowIso, message);
+    }
+
+    await updateJobRecord({
+      jobId,
+      status: "failed",
+      logs: {
+        error: message,
+        sectionKey: typeof state.currentSectionIndex === "number" ? state.sections[state.currentSectionIndex].key : null,
+      },
+      resumableState: state,
+    });
+
+    throw error;
+  }
+}
+
+function setSectionState(section: ComposeJobState["sections"][number], status: ComposeSectionStatus, updatedAtIso: string, lastError?: string) {
+  section.status = status;
+  section.lastUpdatedAt = updatedAtIso;
+  if (lastError) {
+    section.lastError = lastError;
+  } else {
+    delete section.lastError;
+  }
+}
+
+async function fetchLedgerEntries(projectId: string, ledgerIds: string[]) {
+  const entries = await prisma.ledgerEntry.findMany({
+    where: {
+      projectId,
+      id: { in: ledgerIds },
+    },
+    select: {
+      id: true,
+      citationKey: true,
+      metadata: true,
+      locators: true,
+      verifiedByHuman: true,
+    },
+  });
+
+  const ledgerMap = new Map(entries.map((entry) => [entry.id, entry]));
+
+  const missing = ledgerIds.filter((id) => !ledgerMap.has(id));
+  if (missing.length > 0) {
+    throw new Error(`Missing ledger entries: ${missing.join(", ")}`);
+  }
+
+  return ledgerIds.map((id) => ledgerMap.get(id)!) as LedgerEntryForCompose[];
+}
+
+function validateCitations(sectionKey: string, ledgerIds: string[], ledgerEntries: LedgerEntryForCompose[]) {
+  const references = ledgerIds.map((ledgerId, index) => ({
+    id: `${sectionKey}-citation-${index + 1}`,
+    ledgerEntryId: ledgerId,
+  }));
+
+  const ledgerRecords = ledgerEntries.map((entry) => ({
+    id: entry.id,
+    verifiedByHuman: entry.verifiedByHuman,
+    locators: entry.locators,
+  }));
+
+  assertCitationsValid(references, ledgerRecords);
+}
+
+function buildDraftContent(
+  title: string | undefined,
+  sectionType: ComposeJobQueuePayload["sections"][number]["sectionType"],
+  researchQuestion: string | undefined,
+  narrativeVoice: ComposeJobQueuePayload["narrativeVoice"],
+  ledgerEntries: LedgerEntryForCompose[],
+) {
+  const heading = title ?? defaultHeading(sectionType);
+  const voicePrefix = narrativeVoicePrefix(narrativeVoice);
+
+  const paragraphs = ledgerEntries.map((entry, index) => {
+    const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
+    const studyTitle = typeof metadata.title === "string" && metadata.title.trim().length > 0
+      ? metadata.title.trim()
+      : `Source ${index + 1}`;
+    const journal = typeof metadata.journal === "string" ? metadata.journal : null;
+    const year = typeof metadata.publishedAt === "string" ? metadata.publishedAt : null;
+
+    const citationHint = journal || year
+      ? ` (${[journal, year].filter(Boolean).join(", ")})`
+      : "";
+
+    const narrativeSuffix = researchQuestion
+      ? ` This evidence relates to the research question: ${researchQuestion.trim()}.`
+      : "";
+
+    const prefix = voicePrefix ? `${voicePrefix} ` : "";
+
+    return `${prefix}${studyTitle}${citationHint} contributes to the literature review.${narrativeSuffix} [${entry.citationKey}]`;
+  });
+
+  return {
+    type: "doc",
+    content: [
+      {
+        type: "heading",
+        attrs: { level: 2 },
+        content: [{ type: "text", text: heading }],
+      },
+      ...paragraphs.map((text) => ({
+        type: "paragraph",
+        content: [{ type: "text", text }],
+      })),
+    ],
+  };
+}
+
+function defaultHeading(sectionType: ComposeJobQueuePayload["sections"][number]["sectionType"]) {
+  switch (sectionType) {
+    case "literature_review":
+      return "Literature Review";
+    case "introduction":
+      return "Introduction";
+    case "methods":
+      return "Methods";
+    case "results":
+      return "Results";
+    case "discussion":
+      return "Discussion";
+    case "conclusion":
+      return "Conclusion";
+    default:
+      return "Draft Section";
+  }
+}
+
+function narrativeVoicePrefix(narrativeVoice: ComposeJobQueuePayload["narrativeVoice"]) {
+  switch (narrativeVoice) {
+    case "confident":
+      return "The evidence strongly suggests that";
+    case "cautious":
+      return "The available evidence indicates that";
+    default:
+      return "";
+  }
+}
+
+function primaryLocator(entry: LedgerEntryForCompose) {
+  const locators = Array.isArray(entry.locators) ? entry.locators : [];
+  return locators.length > 0 ? toJson(locators[0]) : null;
+}
+
+function toJson<T>(value: T) {
+  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
+}
+
+function cloneState(state: ComposeJobState) {
+  return JSON.parse(JSON.stringify(state)) as ComposeJobState;
 }

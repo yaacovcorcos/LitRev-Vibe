@@ -4,6 +4,11 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-16 — Compose Worker Implementation
+- Implemented `processComposeJob` to validate ledger citations, persist draft sections, and update job progress with resumable state snapshots.
+- Added activity logging per generated section and deterministic draft content fallback that references ledger metadata.
+- Backed the worker with Vitest coverage using mocked Prisma transactions and job helpers to verify success and failure paths.
+
 ### 2025-10-16 — Compose Job Contract Scaffolding
 - Defined compose job payload + resumable state with Zod, supporting per-section metadata and citation requirements.
 - Added Prisma-backed job creation helper that logs enqueue events to the activity timeline.
