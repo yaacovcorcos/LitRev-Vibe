@@ -18,6 +18,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Added citation validator module enforcing ledger-only, verified locators with Vitest coverage.
 - Wired triage rationale + Ask-AI flows to OpenAI (with graceful fallbacks when API unavailable).
 - Added abstract-based quote fallback so Ask-AI still surfaces snippets before PDF ingestion lands.
+- Wired integrity feed ingestion stubs (Retraction Watch + DOAJ) that flag matching candidates.
 
 ### 2025-10-14 — Triage AI Scaffolding
 - Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.

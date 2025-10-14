@@ -50,6 +50,9 @@ Quick reference for navigating the repository. Update this index whenever new to
 ## Scripts & Config
 - `scripts/agent-verify.sh` — Lint/test/storybook guardrail script for AI agents.
 - `scripts/ingest-integrity-feeds.ts` — Placeholder ingestion runner for Retraction Watch + DOAJ feeds.
+
+## Data
+- `data/integrity/` — Sample integrity feed snapshots (Retraction Watch, DOAJ) consumed by ingestion stubs.
 - `.github/workflows/ci.yml` — GitHub Actions workflow invoking agent verify.
 
 ## Data & Migrations
