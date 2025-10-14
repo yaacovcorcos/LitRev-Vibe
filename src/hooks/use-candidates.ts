@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { SearchQuery } from "@/lib/search";
 
-const candidateKeys = {
-  base: 'candidates' as const,
-  all: (projectId: string) => ['candidates', projectId] as const,
-  list: (projectId: string, page: number, pageSize: number) => ['candidates', projectId, page, pageSize] as const,
+export const candidateKeys = {
+  base: "candidates" as const,
+  all: (projectId: string) => ["candidates", projectId] as const,
+  list: (projectId: string, page: number, pageSize: number, statuses: string[]) =>
+    ["candidates", projectId, page, pageSize, statuses.join("|")] as const,
 };
 
 export type Candidate = {
@@ -16,6 +17,7 @@ export type Candidate = {
   metadata: Record<string, unknown>;
   oaLinks?: Record<string, unknown> | null;
   integrityFlags?: Record<string, unknown> | null;
+  aiRationale?: Record<string, unknown> | null;
   triageStatus: string;
   createdAt: string;
 };
@@ -33,11 +35,14 @@ type EnqueueSearchInput = {
   adapters?: string[];
 };
 
-async function fetchCandidates(projectId: string, page: number, pageSize: number) {
+async function fetchCandidates(projectId: string, page: number, pageSize: number, statuses: string[]) {
   const params = new URLSearchParams({
     page: String(page),
     pageSize: String(pageSize),
   });
+  if (statuses.length > 0) {
+    params.set("status", statuses.join(","));
+  }
   const response = await fetch(`/api/projects/${projectId}/search?${params.toString()}`);
 
   if (!response.ok) {
@@ -63,22 +68,24 @@ async function enqueueSearch({ projectId, query, adapters }: EnqueueSearchInput)
   return response.json() as Promise<{ jobId: string }>;
 }
 
-export function useCandidates(projectId: string | null, page = 0, pageSize = 20) {
-  const key = candidateKeys.list(projectId ?? 'unknown', page, pageSize);
+export function useCandidates(projectId: string | null, page = 0, pageSize = 20, statuses: string[] = ["pending"]) {
+  const key = candidateKeys.list(projectId ?? "unknown", page, pageSize, statuses);
   return useQuery({
     queryKey: key,
-    queryFn: () => fetchCandidates(projectId as string, page, pageSize),
+    queryFn: () => fetchCandidates(projectId as string, page, pageSize, statuses),
     enabled: Boolean(projectId),
   });
 }
 
-export function useEnqueueSearch(page = 0, pageSize = 20) {
+export function useEnqueueSearch(page = 0, pageSize = 20, statuses: string[] = ["pending"]) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: enqueueSearch,
     onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: candidateKeys.list(projectId, page, pageSize) });
+      queryClient.invalidateQueries({
+        queryKey: candidateKeys.list(projectId, page, pageSize, statuses),
+      });
     },
   });
 }

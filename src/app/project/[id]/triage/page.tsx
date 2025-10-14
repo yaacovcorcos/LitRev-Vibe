@@ -23,8 +23,9 @@ export default function TriagePage() {
   const { data: project, isLoading: projectLoading } = useProject(projectId);
   const page = 0;
   const pageSize = 20;
-  const { data: candidateData, isLoading: candidatesLoading, isRefetching } = useCandidates(projectId, page, pageSize);
-  const enqueueSearch = useEnqueueSearch(page, pageSize);
+  const statuses = ["pending"];
+  const { data: candidateData, isLoading: candidatesLoading, isRefetching } = useCandidates(projectId, page, pageSize, statuses);
+  const enqueueSearch = useEnqueueSearch(page, pageSize, statuses);
 
   const [queryTerms, setQueryTerms] = useState("hypertension lifestyle modifications");
   const projectName = useMemo(() => {
@@ -139,7 +140,7 @@ export default function TriagePage() {
           <h2 className="text-lg font-semibold text-foreground">Pending candidates</h2>
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             {isRefetching ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            {candidateData ? `${candidateData.total} result${candidateData.total === 1 ? '' : 's'}` : ''}
+            {candidateData ? `${candidateData.total} result${candidateData.total === 1 ? "" : "s"}` : ""}
           </span>
         </div>
 
@@ -152,12 +153,14 @@ export default function TriagePage() {
         ) : candidateData && candidateData.candidates.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2">
             {candidateData.candidates.map((candidate) => (
-              <CandidateCard key={candidate.id} candidate={candidate} />
+              projectId ? (
+                <CandidateCard key={candidate.id} projectId={projectId} candidate={candidate} />
+              ) : null
             ))}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-muted-foreground/40 p-10 text-center text-sm text-muted-foreground">
-            No candidates found. Run a search to populate the triage queue.
+            No pending candidates. Run a search or review kept references in the Evidence Ledger.
           </div>
         )}
       </section>

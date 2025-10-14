@@ -29,7 +29,12 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `components/triage/` — Triage candidate cards and listing UI.
 - `components/providers/` — Cross-cutting providers (React Query, etc.).
 - `components/ui/` — shadcn/ui generated primitives (buttons, cards, textarea, etc.).
+- `app/project/[id]/ledger/` — Evidence Ledger workspace surface and inspector.
+- `hooks/use-candidate-rationale.ts` — React Query helpers for fetching and asking AI about a candidate.
+- `hooks/use-keep-candidate.ts` — Mutation helper for enforcing locator requirement before keeping to ledger.
+- `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
+- `lib/ai/` — AI orchestration helpers (triage rationale + Ask-AI stubs with rate limiting).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
 - `lib/navigation.ts` — Navigation metadata powering the shell.
 - `lib/prisma.ts` — Prisma client singleton usable across API routes and server actions.

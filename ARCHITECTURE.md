@@ -9,12 +9,13 @@
 - **Queue Infrastructure (`src/lib/queue/`)**: Redis connection helpers, queue definitions, and worker setup for resumable jobs. `src/scripts/run-worker.ts` boots a worker.
 - **Prisma Layer (`prisma/`)**: Database schema (`schema.prisma`), migrations, seed data, and Prisma client wrapper (`src/lib/prisma.ts`).
 - **API Routes (`src/app/api/projects`)**: REST endpoints providing project CRUD backed by Prisma.
-- **Client Hooks (`src/hooks/use-projects.ts`)**: React Query hooks for fetching/mutating project data.
-- **Planning Workspace (`src/app/project/[id]/planning`)**: Client-side planning editor composed of reusable planning section components.
+- **Client Hooks (`src/hooks/`)**: React Query hooks for fetching/mutating project, search, and triage data.
+- **AI Layer (`src/lib/ai/`)**: AI orchestration helpers (triage rationale generation, Ask-AI proxying, rate limiting).
 - **Storybook (`.storybook/`, `src/stories/`)**: Visual documentation of tokens and components. Stories must stay in sync with UI updates.
 - **Planning Workspace (`src/app/project/[id]/planning`)**: Client-side planning editor composed of reusable planning section components.
 - **Activity Timeline (`src/app/project/[id]/activity`)**: Timeline view of project events backed by React Query hooks and shadcn UI cards.
 - **Triage Workspace (`src/app/project/[id]/triage`)**: Candidate search/triage UI wired to search jobs and React Query hooks.
+- **Evidence Ledger (`src/app/project/[id]/ledger`)**: Vetted reference workspace with inspector for metadata, locators, and integrity signals.
 - **Automation Scripts (`scripts/`)**: `agent-verify.sh` guardrails, additional automation will live here.
 
 ## Data Flow (Current)

@@ -50,16 +50,25 @@ export async function GET(request: Request, { params }: RouteParams) {
   const { searchParams } = new URL(request.url);
   const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10));
   const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') ?? '20', 10)));
+  const statusParam = searchParams.get('status');
+  const statuses = statusParam
+    ? statusParam.split(',').map((value) => value.trim()).filter(Boolean)
+    : ['pending'];
+
+  const whereClause = {
+    projectId: params.id,
+    ...(statuses.length > 0 ? { triageStatus: { in: statuses } } : {}),
+  };
 
   const [candidates, total] = await prisma.$transaction([
     prisma.candidate.findMany({
-      where: { projectId: params.id },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       take: pageSize,
       skip: page * pageSize,
     }),
     prisma.candidate.count({
-      where: { projectId: params.id },
+      where: whereClause,
     }),
   ]);
 
