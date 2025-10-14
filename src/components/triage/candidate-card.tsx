@@ -13,6 +13,7 @@ import type { AskAiResponse } from "@/lib/ai/rationale";
 import type { SearchResult } from "@/lib/search";
 import { cn } from "@/lib/utils";
 import { useKeepCandidate } from "@/hooks/use-keep-candidate";
+import { useSnippetExtraction } from "@/hooks/use-snippet-extraction";
 
 const FALLBACK_QUESTION = "Does this evidence align with our inclusion criteria?";
 
@@ -118,6 +119,7 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
   );
   const askMutation = useAskCandidateAI(projectId, candidate.id);
   const keepMutation = useKeepCandidate(projectId);
+  const snippetMutation = useSnippetExtraction();
 
   const [question, setQuestion] = useState(FALLBACK_QUESTION);
   const [askResponse, setAskResponse] = useState<AskAiResponse | null>(null);
@@ -131,6 +133,7 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
     source: "",
   });
   const [locatorError, setLocatorError] = useState<string | null>(null);
+  const [snippetMessage, setSnippetMessage] = useState<string | null>(null);
 
   const handleAsk = async () => {
     const cleanQuestion = question.trim();
@@ -345,6 +348,27 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
               >
                 {askMutation.isPending ? "Asking…" : "Ask"}
               </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={snippetMutation.isPending || !projectId}
+                onClick={async () => {
+                  if (!projectId) {
+                    return;
+                  }
+                  try {
+                    setSnippetMessage(null);
+                    await snippetMutation.mutateAsync({ projectId, candidateId: candidate.id });
+                    setSnippetMessage("Snippet job enqueued. Quotes update automatically once ready.");
+                  } catch (error) {
+                    console.error(error);
+                    setSnippetMessage("Unable to enqueue snippet extraction. Try again later.");
+                  }
+                }}
+              >
+                {snippetMutation.isPending ? "Enqueuing…" : "Refresh snippets"}
+              </Button>
             </div>
             {askResponse ? (
               <div className="space-y-3 rounded-md bg-muted/40 p-3 text-sm text-foreground/90">
@@ -366,6 +390,7 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
                 ) : null}
               </div>
             ) : null}
+            {snippetMessage ? <p className="text-xs text-muted-foreground">{snippetMessage}</p> : null}
           </div>
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Keep to ledger</p>

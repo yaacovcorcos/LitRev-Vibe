@@ -19,6 +19,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Separate locator "pending review" state with manual verification controls in ledger UI.
 - Add triage rationale queue job for OpenAI batching with retry metrics.
 - Use stored locator snippets when available (fallback for Ask-AI quotes and prompts).
+- Added snippet extraction API/button to refresh PDF quotes from triage.
 - Provide Storybook coverage for locator summaries.
 - Queue-backed integrity feed ingestion job (Retraction Watch/DOAJ).
 
