@@ -14,13 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAddLocator, useLedgerEntries, useVerifyLocator, type LedgerEntry } from "@/hooks/use-ledger";
 import { useProject } from "@/hooks/use-projects";
-import {
-  determineLocatorStatus,
-  getLocatorStatusDisplay,
-  type LocatorStatus,
-  type LocatorStatusTone,
-} from "@/lib/ledger/status";
+import { determineLocatorStatus, getLocatorStatusDisplay, type LocatorStatus } from "@/lib/ledger/status";
 import { cn } from "@/lib/utils";
+import { LocatorBanner } from "@/components/ledger/locator-banner";
 
 const pageSize = 20;
 
@@ -537,14 +533,17 @@ type InspectorStatusBannerProps = {
 function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
   const status = determineLocatorStatus({ locators: entry.locators, verifiedByHuman: entry.verifiedByHuman });
   const display = getLocatorStatusDisplay(status);
-  const containerClasses = getInspectorBannerClasses(display.tone);
 
   return (
-    <div className={containerClasses.container}>
-      <p className={containerClasses.title}>{display.inspectorTitle}</p>
-      <p className={containerClasses.body}>{display.inspectorBody}</p>
-      {status === "locator_pending_review" ? <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} /> : null}
-    </div>
+    <LocatorBanner
+      display={display}
+      tone={display.tone}
+      actionSlot={
+        status === "locator_pending_review" ? (
+          <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} />
+        ) : null
+      }
+    />
   );
 }
 
@@ -734,34 +733,12 @@ function VerifyButton({ entryId, page, pageSize }: VerifyButtonProps) {
   );
 }
 
-const BADGE_CLASS_MAP: Record<LocatorStatusTone, string> = {
+const BADGE_CLASSES = {
   danger: "border-destructive/40 text-destructive",
   warning: "border-amber-300 text-amber-700",
   success: "border-primary/40 text-primary",
-};
+} as const;
 
-const INSPECTOR_CLASS_MAP: Record<LocatorStatusTone, { container: string; title: string; body: string }> = {
-  danger: {
-    container: "mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive",
-    title: "font-semibold uppercase tracking-wide",
-    body: "text-destructive/80",
-  },
-  warning: {
-    container: "mt-3 space-y-2 rounded-md border border-amber-300/70 bg-amber-100/60 p-3 text-xs text-amber-700",
-    title: "font-semibold uppercase tracking-wide",
-    body: "text-amber-700",
-  },
-  success: {
-    container: "mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground/80",
-    title: "font-semibold uppercase tracking-wide text-primary",
-    body: "text-primary-foreground/70",
-  },
-};
-
-function getLocatorBadgeClasses(tone: LocatorStatusTone) {
-  return cn("uppercase text-[11px]", BADGE_CLASS_MAP[tone] ?? BADGE_CLASS_MAP.danger);
-}
-
-function getInspectorBannerClasses(tone: LocatorStatusTone) {
-  return INSPECTOR_CLASS_MAP[tone] ?? INSPECTOR_CLASS_MAP.danger;
+function getLocatorBadgeClasses(tone: keyof typeof BADGE_CLASSES) {
+  return cn("uppercase text-[11px]", BADGE_CLASSES[tone]);
 }
