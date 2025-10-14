@@ -92,8 +92,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       integrityNotes: candidate.integrityFlags as Record<string, unknown> | null,
       importedFrom: candidate.searchAdapter,
       keptAt: new Date(),
-      verifiedByHuman: true,
-    },
+      },
   });
 
   await prisma.candidate.update({

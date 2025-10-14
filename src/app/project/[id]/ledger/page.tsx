@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useAddLocator, useLedgerEntries, type LedgerEntry } from "@/hooks/use-ledger";
+import { useAddLocator, useLedgerEntries, useVerifyLocator, type LedgerEntry } from "@/hooks/use-ledger";
 import { useProject } from "@/hooks/use-projects";
 import { determineLocatorStatus, type LocatorStatus } from "@/lib/ledger/status";
 import { cn } from "@/lib/utils";
@@ -554,9 +554,10 @@ function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
   }
 
   return (
-    <div className="mt-3 space-y-1 rounded-md border border-amber-300/70 bg-amber-100/60 p-3 text-xs text-amber-700">
+    <div className="mt-3 space-y-2 rounded-md border border-amber-300/70 bg-amber-100/60 p-3 text-xs text-amber-700">
       <p className="font-semibold uppercase tracking-wide">Locator captured</p>
       <p>Double-check locator accuracy before marking this reference as verified.</p>
+      <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} />
     </div>
   );
 }
@@ -710,6 +711,38 @@ function LocatorField({ id, label, placeholder, value, onChange, disabled }: Loc
         disabled={disabled}
       />
     </div>
+  );
+}
+
+type VerifyButtonProps = {
+  entryId: string;
+  page: number;
+  pageSize: number;
+};
+
+function VerifyButton({ entryId, page, pageSize }: VerifyButtonProps) {
+  const params = useParams<Params>();
+  const projectId = params?.id;
+  const verifyMutation = useVerifyLocator(page, pageSize);
+
+  const handleVerify = () => {
+    if (!projectId) {
+      return;
+    }
+    verifyMutation.mutate({ projectId, entryId, verified: true });
+  };
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      disabled={verifyMutation.isPending}
+      onClick={handleVerify}
+      className="text-xs"
+    >
+      {verifyMutation.isPending ? "Marking…" : "Mark as verified"}
+    </Button>
   );
 }
 

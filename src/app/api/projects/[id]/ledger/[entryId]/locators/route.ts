@@ -65,7 +65,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     where: { id: entry.id },
     data: {
       locators: [...existingLocators, parsed.data.locator],
-      verifiedByHuman: true,
+      verifiedByHuman: false,
     },
   });
 

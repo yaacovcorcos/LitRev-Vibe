@@ -16,6 +16,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Connect triage rationale & Ask-AI endpoints to OpenAI (fallbacks retained offline).
 - Augment Ask-AI fallback with abstract-based quotes for environments without PDF snippets.
 - Add integrity feed ingestion stub using local Retraction Watch/DOAJ datasets and candidate flagging.
+- Separate locator "pending review" state with manual verification controls in ledger UI.
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.
