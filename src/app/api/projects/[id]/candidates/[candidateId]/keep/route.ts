@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity-log";
 
 const locatorSchema = z
   .object({
@@ -91,14 +92,24 @@ export async function POST(request: Request, { params }: RouteParams) {
       integrityNotes: candidate.integrityFlags as Record<string, unknown> | null,
       importedFrom: candidate.searchAdapter,
       keptAt: new Date(),
-      verifiedByHuman: true,
-    },
+      },
   });
 
   await prisma.candidate.update({
     where: { id: candidate.id },
     data: {
       triageStatus: "kept",
+    },
+  });
+
+  await logActivity({
+    projectId: candidate.projectId,
+    action: "ledger.keep",
+    actor: "system",
+    payload: {
+      candidateId: candidate.id,
+      ledgerEntryId: ledgerEntry.id,
+      locator: parsed.data.locator,
     },
   });
 

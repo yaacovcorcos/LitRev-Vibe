@@ -33,8 +33,11 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-candidate-rationale.ts` — React Query helpers for fetching and asking AI about a candidate.
 - `hooks/use-keep-candidate.ts` — Mutation helper for enforcing locator requirement before keeping to ledger.
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
+- `lib/integrity/` — Integrity feed ingestion stubs and helpers.
+- `lib/ledger/` — Locator status helpers and related utilities.
+- `lib/compose/` — Compose workflow helpers (citation validator, etc.).
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
-- `lib/ai/` — AI orchestration helpers (triage rationale + Ask-AI stubs with rate limiting).
+- `lib/ai/` — AI orchestration helpers (OpenAI client, triage rationale jobs, Ask-AI).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
 - `lib/navigation.ts` — Navigation metadata powering the shell.
 - `lib/prisma.ts` — Prisma client singleton usable across API routes and server actions.
@@ -46,6 +49,10 @@ Quick reference for navigating the repository. Update this index whenever new to
 
 ## Scripts & Config
 - `scripts/agent-verify.sh` — Lint/test/storybook guardrail script for AI agents.
+- `scripts/ingest-integrity-feeds.ts` — Placeholder ingestion runner for Retraction Watch + DOAJ feeds.
+
+## Data
+- `data/integrity/` — Sample integrity feed snapshots (Retraction Watch, DOAJ) consumed by ingestion stubs.
 - `.github/workflows/ci.yml` — GitHub Actions workflow invoking agent verify.
 
 ## Data & Migrations

@@ -13,6 +13,16 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Required locators during triage keep flows (API + UI) to uphold “no locator, no ledger” policy.
 - Filtered triage queue to pending entries so kept references move directly into the Evidence Ledger.
 - Captured locator quotes + sources in both keep flow and inspector to preserve provenance context.
+- Logged activity entries when candidates are kept, providing immediate audit feedback.
+- Introduced locator status helper (pending/review/verified) with UI badges and unit coverage.
+- Added citation validator module enforcing ledger-only, verified locators with Vitest coverage.
+- Wired triage rationale + Ask-AI flows to OpenAI (with graceful fallbacks when API unavailable).
+- Added abstract-based quote fallback so Ask-AI still surfaces snippets before PDF ingestion lands.
+- Wired integrity feed ingestion stubs (Retraction Watch + DOAJ) that flag matching candidates.
+- Added manual locator verification toggle (pending → review → verified) in ledger UI.
+- Created triage rationale batch job (OpenAI) with queue retries + metrics schema.
+- Updated Ask-AI prompts to prioritize stored locator snippets (PDF fallback) before abstract quotes.
+- Captured locator summary Storybook coverage for responsive QA.
 
 ### 2025-10-14 — Triage AI Scaffolding
 - Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.

@@ -21,6 +21,12 @@ type OALinksRecord = {
   oaStatus?: unknown;
 };
 
+type IntegrityFlagRecord = {
+  label?: unknown;
+  severity?: unknown;
+  source?: unknown;
+};
+
 function isString(value: unknown): value is string {
   return typeof value === "string";
 }
@@ -52,6 +58,43 @@ function isOALinksRecord(value: unknown): value is OALinksRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+type ParsedIntegrityFlag = {
+  label: string;
+  severity: "critical" | "warning" | "info";
+  source: string;
+};
+
+function parseIntegrityFlags(value: unknown): ParsedIntegrityFlag[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return null;
+      }
+
+      const flag = item as IntegrityFlagRecord;
+      const label = typeof flag.label === "string" ? flag.label : null;
+      const severityRaw = typeof flag.severity === "string" ? flag.severity : null;
+      const source = typeof flag.source === "string" ? flag.source : "unknown";
+
+      if (!label || !severityRaw) {
+        return null;
+      }
+
+      const severity = severityRaw === "critical" || severityRaw === "warning" ? severityRaw : "info";
+
+      return {
+        label,
+        severity,
+        source,
+      } satisfies ParsedIntegrityFlag;
+    })
+    .filter((flag): flag is ParsedIntegrityFlag => flag !== null);
+}
+
 type CandidateCardProps = {
   projectId: string;
   candidate: Candidate;
@@ -64,6 +107,7 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
   const oaLinksRecord = isOALinksRecord(candidate.oaLinks) ? candidate.oaLinks : undefined;
   const oaLink = oaLinksRecord && isString(oaLinksRecord.bestOALink) ? oaLinksRecord.bestOALink : undefined;
   const oaStatus = oaLinksRecord && isString(oaLinksRecord.oaStatus) ? oaLinksRecord.oaStatus : undefined;
+  const integrityFlags = parseIntegrityFlags(candidate.integrityFlags ?? undefined);
   const triageStatus = typeof candidate.triageStatus === "string" ? candidate.triageStatus.toLowerCase() : "";
   const isPending = triageStatus === "pending";
 
@@ -148,6 +192,8 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
         paragraph?: number;
         sentence?: number;
         note?: string;
+        quote?: string;
+        source?: string;
       } = {};
 
       const pageNumber = parseLocatorNumber(locatorForm.page, "Page");
@@ -216,6 +262,15 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
               {oaStatus}
             </Badge>
           ) : null}
+          {integrityFlags.map((flag, index) => (
+            <Badge
+              key={`${flag.source}-${flag.label}-${index}`}
+              variant={flag.severity === "critical" ? "destructive" : flag.severity === "warning" ? "outline" : "secondary"}
+              className="text-xs"
+            >
+              {flag.label}
+            </Badge>
+          ))}
         </div>
         <CardTitle className="text-lg font-semibold text-foreground">
           {result?.title ?? "Untitled reference"}
@@ -290,7 +345,6 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
               >
                 {askMutation.isPending ? "Asking…" : "Ask"}
               </Button>
-              {askMutation.isError ? <span className="text-xs text-destructive">Request failed.</span> : null}
             </div>
             {askResponse ? (
               <div className="space-y-3 rounded-md bg-muted/40 p-3 text-sm text-foreground/90">

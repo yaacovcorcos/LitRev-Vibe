@@ -25,7 +25,7 @@ This revision incorporates the parent specification requirements and addresses t
 | Database            | PostgreSQL (Neon/Supabase) + Prisma | Primary store for projects, plans, candidates, ledger, jobs, activity. |
 | Object Storage      | Supabase Storage (or S3-compatible) | Stores fetched PDFs, PRISMA diagrams, exports. |
 | Evidence Sources    | PubMed (metadata + abstracts), Crossref (metadata), Unpaywall (OA links), PDF text extraction (GROBID or plain PDF parser) | Gives locator-grade text; fallback manual locator entry. |
-| AI Providers        | Anthropic Claude 3 for triage & compose, GPT-4 Turbo for structured planning | Swap via adapter. |
+| AI Providers        | OpenAI (GPT-4 Turbo / GPT-4o) for triage, compose, and structured planning | Swap via adapter. |
 | Integrity Data      | Retraction Watch API (or static feed), DOAJ list, internal watchlist | Processed nightly; surfaced in triage. |
 | Authentication      | None (single-user workspace) | Deliberately deferred; design DB schema to add user_id columns later without refactor. |
 | Deployment          | Vercel (UI & tRPC) + dedicated worker deployment (Fly.io/Render) for queues | Workers talk to Redis + Postgres. |
@@ -178,7 +178,7 @@ Indexes added for quick lookup by `project_id`, `type+status`, and `citation_key
 - Ship refined triage card components (loading, AI pending, flagged) with interaction specs and keyboard flows.
 
 ### Milestone 3 (Weeks 5-6) — Triage & Ledger
-- Claude triage rationale, Ask-AI with PDF snippet quoting.
+- OpenAI triage rationale, Ask-AI with PDF snippet quoting.
 - Manual locator entry UI; enforce locator requirement before ledger move.
 - Integrity feeds ingestion (Retraction Watch snapshot, DOAJ import) with nightly worker.
 - Evidence Ledger page & inspector with locator verification states.
@@ -281,7 +281,7 @@ AI agents should use this backlog as the execution queue. Each task includes acc
 - [ ] Complete Triage page skeleton using triage card component states and keyboard flows (AC: Storybook stories for each state; Playwright smoke test).
 
 ### Milestone 3 — Triage & Ledger
-- [ ] Implement Claude-based triage rationale + batching with retry strategy (AC: job metrics capture success/fail counts; retry config documented).  
+- [x] Implement OpenAI-based triage rationale + batching with retry strategy (AC: job metrics capture success/fail counts; retry config documented).  
 - [ ] Deliver Ask-AI panel using PDF snippets and manual locator fallback (AC: keep-to-ledger blocked until locator present; UI prompts verified).  
 - [ ] Ingest Retraction Watch + DOAJ feeds nightly; surface signals in UI (AC: integrity flags shown on triage cards; monitoring alerts on ingestion failure).  
 - [ ] Finalize manual locator entry UX with validation states (`pending_locator`, `locator_verified`) (AC: unit tests cover transitions; ledger inspector reflects state).  
