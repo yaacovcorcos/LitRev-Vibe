@@ -20,6 +20,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Added abstract-based quote fallback so Ask-AI still surfaces snippets before PDF ingestion lands.
 - Wired integrity feed ingestion stubs (Retraction Watch + DOAJ) that flag matching candidates.
 - Added manual locator verification toggle (pending → review → verified) in ledger UI.
+- Created triage rationale batch job (OpenAI) with queue retries + metrics schema.
 
 ### 2025-10-14 — Triage AI Scaffolding
 - Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.

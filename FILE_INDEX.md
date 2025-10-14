@@ -37,7 +37,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `lib/ledger/` — Locator status helpers and related utilities.
 - `lib/compose/` — Compose workflow helpers (citation validator, etc.).
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
-- `lib/ai/` — AI orchestration helpers (triage rationale + Ask-AI stubs with rate limiting).
+- `lib/ai/` — AI orchestration helpers (OpenAI client, triage rationale jobs, Ask-AI).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
 - `lib/navigation.ts` — Navigation metadata powering the shell.
 - `lib/prisma.ts` — Prisma client singleton usable across API routes and server actions.

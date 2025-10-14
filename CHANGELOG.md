@@ -17,6 +17,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Augment Ask-AI fallback with abstract-based quotes for environments without PDF snippets.
 - Add integrity feed ingestion stub using local Retraction Watch/DOAJ datasets and candidate flagging.
 - Separate locator "pending review" state with manual verification controls in ledger UI.
+- Add triage rationale queue job for OpenAI batching with retry metrics.
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.
