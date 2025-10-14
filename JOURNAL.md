@@ -4,6 +4,12 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-15 — Locator Workflow Hardening
+- Added unit tests for ledger locator POST route covering validation, append behaviour, and verification reset to pending review.
+- Added unit tests for ledger verification route ensuring payload validation and status updates.
+- Confirmed vitest suite passes and marked Milestone 3 backlog item for manual locator UX as complete.
+- Extracted locator status banner UI into shared component and wired Storybook scenarios for ledger page + inspector to support design sign-off.
+
 ### 2025-10-14 — Evidence Ledger Skeleton
 - Implemented paginated ledger API route and React Query hook.
 - Delivered `/project/:id/ledger` workspace with entry list + inspector placeholder for metadata, locators, and provenance.

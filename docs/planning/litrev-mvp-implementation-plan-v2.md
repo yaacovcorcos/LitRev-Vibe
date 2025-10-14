@@ -284,8 +284,8 @@ AI agents should use this backlog as the execution queue. Each task includes acc
 - [x] Implement OpenAI-based triage rationale + batching with retry strategy (AC: job metrics capture success/fail counts; retry config documented).  
 - [x] Deliver Ask-AI panel using PDF snippets and manual locator fallback (AC: keep-to-ledger blocked until locator present; UI prompts verified).  
 - [x] Ingest Retraction Watch + DOAJ feeds nightly; surface signals in UI (AC: integrity flags shown on triage cards; monitoring alerts on ingestion failure).  
-- [ ] Finalize manual locator entry UX with validation states (`pending_locator`, `locator_verified`) (AC: unit tests cover transitions; ledger inspector reflects state).  
-- [ ] Publish Ledger page + inspector with responsive layout, design sign-off, and stories.
+- [x] Finalize manual locator entry UX with validation states (`pending_locator`, `locator_verified`) (AC: unit tests cover transitions; ledger inspector reflects state).  
+- [x] Publish Ledger page + inspector with responsive layout, design sign-off, and stories.
 
 ### Milestone 4 — Draft & Compose
 - [ ] Build citation validator enforcing ledger-only citations and verified locators (AC: failing validation blocks compose job; unit tests for edge cases).  

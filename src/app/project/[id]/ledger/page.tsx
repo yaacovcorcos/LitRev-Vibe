@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { BookOpen, Loader2 } from "lucide-react";
 
+import { LocatorBanner } from "@/components/ledger/locator-banner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -537,14 +538,11 @@ type InspectorStatusBannerProps = {
 function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
   const status = determineLocatorStatus({ locators: entry.locators, verifiedByHuman: entry.verifiedByHuman });
   const display = getLocatorStatusDisplay(status);
-  const containerClasses = getInspectorBannerClasses(display.tone);
 
   return (
-    <div className={containerClasses.container}>
-      <p className={containerClasses.title}>{display.inspectorTitle}</p>
-      <p className={containerClasses.body}>{display.inspectorBody}</p>
+    <LocatorBanner display={display}>
       {status === "locator_pending_review" ? <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} /> : null}
-    </div>
+    </LocatorBanner>
   );
 }
 
@@ -739,28 +737,4 @@ function getLocatorBadgeClasses(tone: LocatorStatusTone) {
     "border-amber-300 text-amber-700": tone === "warning",
     "border-destructive/40 text-destructive": tone === "danger",
   });
-}
-
-function getInspectorBannerClasses(tone: LocatorStatusTone) {
-  switch (tone) {
-    case "warning":
-      return {
-        container: "mt-3 space-y-2 rounded-md border border-amber-300/70 bg-amber-100/60 p-3 text-xs text-amber-700",
-        title: "font-semibold uppercase tracking-wide",
-        body: "text-amber-700",
-      };
-    case "success":
-      return {
-        container: "mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground/80",
-        title: "font-semibold uppercase tracking-wide text-primary",
-        body: "text-primary-foreground/70",
-      };
-    case "danger":
-    default:
-      return {
-        container: "mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive",
-        title: "font-semibold uppercase tracking-wide",
-        body: "text-destructive/80",
-      };
-  }
 }
