@@ -28,6 +28,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `components/planning/` — Planning workspace components (section cards, editors).
 - `components/activity/` — Activity & undo timeline components.
 - `components/triage/` — Triage candidate cards and listing UI.
+- `components/draft/` — Draft workspace components (Tiptap editor wrapper, section listing).
 - `components/providers/` — Cross-cutting providers (React Query, etc.).
 - `components/ui/` — shadcn/ui generated primitives (buttons, cards, textarea, etc.).
 - `app/project/[id]/ledger/` — Evidence Ledger workspace surface and inspector.

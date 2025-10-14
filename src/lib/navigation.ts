@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import {
+  BookText,
   Grid,
   Home,
   Layers,
@@ -34,6 +35,7 @@ export const workspaceNav: NavSection[] = [
     label: 'Project',
     items: [
       { title: 'Planning', href: '/project/:id/planning', icon: NotebookPen },
+      { title: 'Draft & Compose', href: '/project/:id/draft', icon: BookText },
       { title: 'Settings', href: '/project/:id/settings', icon: Settings2 },
     ],
   },
