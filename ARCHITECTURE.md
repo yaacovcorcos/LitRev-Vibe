@@ -15,6 +15,7 @@
 - **Planning Workspace (`src/app/project/[id]/planning`)**: Client-side planning editor composed of reusable planning section components.
 - **Activity Timeline (`src/app/project/[id]/activity`)**: Timeline view of project events backed by React Query hooks and shadcn UI cards.
 - **Triage Workspace (`src/app/project/[id]/triage`)**: Candidate search/triage UI wired to search jobs and React Query hooks.
+- **Evidence Ledger (`src/app/project/[id]/ledger`)**: Vetted reference workspace with inspector for metadata, locators, and integrity signals.
 - **Automation Scripts (`scripts/`)**: `agent-verify.sh` guardrails, additional automation will live here.
 
 ## Data Flow (Current)

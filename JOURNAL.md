@@ -4,6 +4,17 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-14 — Evidence Ledger Skeleton
+- Implemented paginated ledger API route and React Query hook.
+- Delivered `/project/:id/ledger` workspace with entry list + inspector placeholder for metadata, locators, and provenance.
+- Documented new module in architecture/file index and surfaced milestone progress in changelog.
+- Added manual locator entry workflow with API endpoint + inspector form; basic validation wired for future verification.
+
+### 2025-10-14 — Triage AI Scaffolding
+- Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.
+- Built React Query hooks + UI wiring for Ask-AI interactions on candidate cards (quotes + error states).
+- Updated architecture/file index docs to cover the new AI layer; noted work-in-progress in changelog.
+
 ### 2025-10-13 — Foundation Setup
 - Added core repository scaffolding: design tokens, Tailwind theme, Storybook, Prisma schema, BullMQ worker, Next.js app shell, and shadcn/ui integration.
 - Established guardrails: `scripts/agent-verify.sh`, `.env.example`, GitHub CI workflow, documentation updates in README.
@@ -30,4 +41,3 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Added search API (`/api/projects/:id/search`) with background job enqueueing.
 - Implemented candidates React Query hooks and triage workspace UI skeleton.
 - Integrated Unpaywall enrichment and persisted results as candidates.
-
