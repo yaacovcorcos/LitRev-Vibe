@@ -11,6 +11,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Added manual locator entry workflow with API endpoint + inspector form; basic validation wired for future verification.
 - Highlighted locator verification status in the workspace and warned users when entries lack coverage.
 - Required locators during triage keep flows (API + UI) to uphold “no locator, no ledger” policy.
+- Filtered triage queue to pending entries so kept references move directly into the Evidence Ledger.
 
 ### 2025-10-14 — Triage AI Scaffolding
 - Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.

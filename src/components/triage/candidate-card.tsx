@@ -64,6 +64,8 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
   const oaLinksRecord = isOALinksRecord(candidate.oaLinks) ? candidate.oaLinks : undefined;
   const oaLink = oaLinksRecord && isString(oaLinksRecord.bestOALink) ? oaLinksRecord.bestOALink : undefined;
   const oaStatus = oaLinksRecord && isString(oaLinksRecord.oaStatus) ? oaLinksRecord.oaStatus : undefined;
+  const triageStatus = typeof candidate.triageStatus === "string" ? candidate.triageStatus.toLowerCase() : "";
+  const isPending = triageStatus === "pending";
 
   const { data: rationaleData, isLoading: rationaleLoading, isError: rationaleError } = useCandidateRationale(
     projectId,
@@ -125,7 +127,7 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
 
   const handleKeep = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!projectId) {
+    if (!projectId || !isPending) {
       return;
     }
 
@@ -298,95 +300,103 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
           </div>
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Keep to ledger</p>
-            <p className="text-xs text-muted-foreground">
-              Supply a locator snippet before keeping. This enforces the “no claim without a locator” policy.
-            </p>
-            <form onSubmit={handleKeep} className="space-y-3">
-              <div className="grid gap-2 sm:grid-cols-3">
-                <LocatorInput
-                  id={`${candidate.id}-keep-page`}
-                  label="Page"
-                  value={locatorForm.page}
-                  disabled={keepMutation.isPending}
-                  onChange={(value) =>
-                    setLocatorForm((prev) => ({
-                      ...prev,
-                      page: value,
-                    }))
-                  }
-                />
-                <LocatorInput
-                  id={`${candidate.id}-keep-paragraph`}
-                  label="Paragraph"
-                  value={locatorForm.paragraph}
-                  disabled={keepMutation.isPending}
-                  onChange={(value) =>
-                    setLocatorForm((prev) => ({
-                      ...prev,
-                      paragraph: value,
-                    }))
-                  }
-                />
-                <LocatorInput
-                  id={`${candidate.id}-keep-sentence`}
-                  label="Sentence"
-                  value={locatorForm.sentence}
-                  disabled={keepMutation.isPending}
-                  onChange={(value) =>
-                    setLocatorForm((prev) => ({
-                      ...prev,
-                      sentence: value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor={`${candidate.id}-keep-note`} className="text-xs font-medium text-muted-foreground">
-                  Note
-                </Label>
-                <Textarea
-                  id={`${candidate.id}-keep-note`}
-                  rows={2}
-                  value={locatorForm.note}
-                  onChange={(event) =>
-                    setLocatorForm((prev) => ({
-                      ...prev,
-                      note: event.target.value,
-                    }))
-                  }
-                  className="text-sm"
-                  disabled={keepMutation.isPending}
-                />
-              </div>
-              {locatorError ? <p className="text-xs text-destructive">{locatorError}</p> : null}
-              {keepMutation.isError ? (
-                <p className="text-xs text-destructive">
-                  {(keepMutation.error as Error).message || "Failed to keep reference."}
+            {isPending ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Supply a locator snippet before keeping. This enforces the “no claim without a locator” policy.
                 </p>
-              ) : null}
-              {keepSuccess ? <p className="text-xs text-emerald-600">Reference kept! Check the Evidence Ledger.</p> : null}
-              <div className="flex items-center gap-2">
-                <Button type="submit" size="sm" disabled={keepMutation.isPending || !projectId}>
-                  {keepMutation.isPending ? "Keeping…" : "Keep"}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() =>
-                    setLocatorForm({
-                      page: "",
-                      paragraph: "",
-                      sentence: "",
-                      note: "",
-                    })
-                  }
-                  disabled={keepMutation.isPending}
-                >
-                  Reset
-                </Button>
+                <form onSubmit={handleKeep} className="space-y-3">
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <LocatorInput
+                      id={`${candidate.id}-keep-page`}
+                      label="Page"
+                      value={locatorForm.page}
+                      disabled={keepMutation.isPending}
+                      onChange={(value) =>
+                        setLocatorForm((prev) => ({
+                          ...prev,
+                          page: value,
+                        }))
+                      }
+                    />
+                    <LocatorInput
+                      id={`${candidate.id}-keep-paragraph`}
+                      label="Paragraph"
+                      value={locatorForm.paragraph}
+                      disabled={keepMutation.isPending}
+                      onChange={(value) =>
+                        setLocatorForm((prev) => ({
+                          ...prev,
+                          paragraph: value,
+                        }))
+                      }
+                    />
+                    <LocatorInput
+                      id={`${candidate.id}-keep-sentence`}
+                      label="Sentence"
+                      value={locatorForm.sentence}
+                      disabled={keepMutation.isPending}
+                      onChange={(value) =>
+                        setLocatorForm((prev) => ({
+                          ...prev,
+                          sentence: value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`${candidate.id}-keep-note`} className="text-xs font-medium text-muted-foreground">
+                      Note
+                    </Label>
+                    <Textarea
+                      id={`${candidate.id}-keep-note`}
+                      rows={2}
+                      value={locatorForm.note}
+                      onChange={(event) =>
+                        setLocatorForm((prev) => ({
+                          ...prev,
+                          note: event.target.value,
+                        }))
+                      }
+                      className="text-sm"
+                      disabled={keepMutation.isPending}
+                    />
+                  </div>
+                  {locatorError ? <p className="text-xs text-destructive">{locatorError}</p> : null}
+                  {keepMutation.isError ? (
+                    <p className="text-xs text-destructive">
+                      {(keepMutation.error as Error).message || "Failed to keep reference."}
+                    </p>
+                  ) : null}
+                  {keepSuccess ? <p className="text-xs text-emerald-600">Reference kept! Check the Evidence Ledger.</p> : null}
+                  <div className="flex items-center gap-2">
+                    <Button type="submit" size="sm" disabled={keepMutation.isPending || !projectId}>
+                      {keepMutation.isPending ? "Keeping…" : "Keep"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setLocatorForm({
+                          page: "",
+                          paragraph: "",
+                          sentence: "",
+                          note: "",
+                        })
+                      }
+                      disabled={keepMutation.isPending}
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div className="rounded-md border border-muted-foreground/40 bg-muted/40 p-3 text-xs text-muted-foreground">
+                Already kept. Review locators, integrity notes, and provenance in the Evidence Ledger.
               </div>
-            </form>
+            )}
           </div>
         </div>
       </CardFooter>
