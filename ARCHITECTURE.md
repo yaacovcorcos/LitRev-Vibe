@@ -10,6 +10,7 @@
 - **Prisma Layer (`prisma/`)**: Database schema (`schema.prisma`), migrations, seed data, and Prisma client wrapper (`src/lib/prisma.ts`).
 - **API Routes (`src/app/api/projects`)**: REST endpoints providing project CRUD backed by Prisma.
 - **Client Hooks (`src/hooks/use-projects.ts`)**: React Query hooks for fetching/mutating project data.
+- **Planning Workspace (`src/app/project/[id]/planning`)**: Client-side planning editor composed of reusable planning section components.
 - **Storybook (`.storybook/`, `src/stories/`)**: Visual documentation of tokens and components. Stories must stay in sync with UI updates.
 - **Planning Workspace (`src/app/project/[id]/planning`)**: Client-side planning editor composed of reusable planning section components.
 - **Activity Timeline (`src/app/project/[id]/activity`)**: Timeline view of project events backed by React Query hooks and shadcn UI cards.

@@ -18,6 +18,10 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Added Prisma-backed REST routes for `/api/projects` (list/create/update/delete).
 - Introduced React Query provider and hooks (`useProjects`, `useCreateProject`, etc.) for client-side data access.
 - Updated documentation (Architecture, File Index) to capture new modules.
+### 2025-10-13 — Planning Workspace Shell
+- Created planning page (`/project/:id/planning`) with sections for scope, questions, query strategy, and outline.
+- Added planning section component and shadcn primitives (card, textarea, label, separator, skeleton).
+- Wired React Query provider into layout and used project hook to populate page header.
 ### 2025-10-13 — Activity Log Scaffolding
 - Added API endpoints and hooks for activity logging (`/api/projects/:id/activity`).
 - Implemented timeline component and Activity page at `/project/:id/activity`.
