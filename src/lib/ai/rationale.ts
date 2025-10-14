@@ -18,7 +18,7 @@ export type AskAiResponse = {
 
 type GenerateContext = {
   projectId: string;
-  candidate: Pick<Candidate, "id" | "metadata" | "searchAdapter">;
+  candidate: Pick<Candidate, "id" | "metadata" | "searchAdapter" | "locatorSnippets">;
 };
 
 enum Confidence {
@@ -111,6 +111,57 @@ function buildCandidateContext(candidate: GenerateContext["candidate"]) {
   };
 }
 
+function extractLocatorSnippets(candidate: GenerateContext["candidate"], limit = 3): AskAiResponse["quotes"] {
+  const raw = candidate.locatorSnippets;
+
+  const snippetsArray = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object"
+      ? Object.values(raw as Record<string, unknown>)
+      : [];
+
+  const snippets = snippetsArray
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
+
+      const record = entry as Record<string, unknown>;
+      const text = typeof record.text === "string" ? record.text.trim() : null;
+      if (!text) {
+        return null;
+      }
+
+      const sourceParts: string[] = [];
+      if (typeof record.source === "string" && record.source.trim()) {
+        sourceParts.push(record.source.trim());
+      }
+      if (typeof record.page === "number") {
+        sourceParts.push(`Page ${record.page}`);
+      } else if (typeof record.page === "string" && record.page.trim()) {
+        sourceParts.push(`Page ${record.page.trim()}`);
+      }
+      if (typeof record.paragraph === "number") {
+        sourceParts.push(`Paragraph ${record.paragraph}`);
+      }
+      if (typeof record.sentence === "number") {
+        sourceParts.push(`Sentence ${record.sentence}`);
+      }
+
+      return {
+        text,
+        source: sourceParts.length > 0 ? sourceParts.join(" · ") : undefined,
+      } satisfies AskAiResponse["quotes"][number];
+    })
+    .filter((snippet): snippet is AskAiResponse["quotes"][number] => Boolean(snippet && snippet.text));
+
+  if (snippets.length === 0) {
+    return [];
+  }
+
+  return snippets.slice(0, limit);
+}
+
 function parseJSON<T>(raw: string): T | null {
   try {
     return JSON.parse(raw) as T;
@@ -167,7 +218,8 @@ function extractAbstractQuotes(context: AskAiContext | GenerateContext, limit = 
 }
 
 function fallbackAskResponse(context: AskAiContext, title: string): AskAiResponse {
-  const quotes = extractAbstractQuotes(context, 2);
+  const snippetQuotes = extractLocatorSnippets(context, 2);
+  const quotes = snippetQuotes.length > 0 ? snippetQuotes : extractAbstractQuotes(context, 2);
   return {
     answer: `Unable to contact OpenAI in this environment. When asked "${context.question}", the assistant would summarize "${title}" with supporting quotes once connectivity is available.`,
     quotes,
@@ -184,6 +236,7 @@ export async function generateTriageRationale(context: GenerateContext): Promise
   }
 
   const candidateContext = buildCandidateContext(context.candidate);
+  const locatorSnippets = extractLocatorSnippets(context.candidate, 3);
 
   try {
     const completion = await client.chat.completions.create({
@@ -206,6 +259,12 @@ export async function generateTriageRationale(context: GenerateContext): Promise
             candidateContext.journal ? `Journal: ${candidateContext.journal}` : null,
             candidateContext.year ? `Published: ${candidateContext.year}` : null,
             candidateContext.abstract ? `Abstract: ${candidateContext.abstract}` : null,
+            locatorSnippets.length > 0
+              ? [
+                  "Locator snippets:",
+                  ...locatorSnippets.map((snippet, index) => `- ${snippet.text}${snippet.source ? ` (${snippet.source})` : ""}`),
+                ].join("\n")
+              : null,
             "Provide a JSON object with keys summary (string), bulletPoints (array of strings), and confidence (low|medium|high).",
           ]
             .filter(Boolean)
@@ -244,7 +303,8 @@ export async function askCandidateQuestion(context: AskAiContext): Promise<AskAi
   }
 
   const candidateContext = buildCandidateContext(context.candidate);
-  const fallbackQuotes = extractAbstractQuotes(context, 2);
+  const snippetQuotes = extractLocatorSnippets(context.candidate, 3);
+  const fallbackQuotes = snippetQuotes.length > 0 ? snippetQuotes : extractAbstractQuotes(context, 2);
 
   try {
     const completion = await client.chat.completions.create({
@@ -267,6 +327,12 @@ export async function askCandidateQuestion(context: AskAiContext): Promise<AskAi
             candidateContext.journal ? `Journal: ${candidateContext.journal}` : null,
             candidateContext.year ? `Published: ${candidateContext.year}` : null,
             candidateContext.abstract ? `Abstract: ${candidateContext.abstract}` : null,
+            snippetQuotes.length > 0
+              ? [
+                  "Locator snippets:",
+                  ...snippetQuotes.map((snippet, index) => `- ${snippet.text}${snippet.source ? ` (${snippet.source})` : ""}`),
+                ].join("\n")
+              : null,
             "Return JSON: { \"answer\": string, \"quotes\": [{ \"text\": string, \"source\"?: string }] }.",
             "If you cannot find supporting evidence, respond cautiously and return quotes as an empty array.",
           ]

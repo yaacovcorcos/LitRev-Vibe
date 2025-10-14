@@ -45,6 +45,7 @@ export async function processTriageRationaleJob(data: unknown): Promise<TriageJo
       projectId: true,
       metadata: true,
       searchAdapter: true,
+      locatorSnippets: true,
     },
   });
 

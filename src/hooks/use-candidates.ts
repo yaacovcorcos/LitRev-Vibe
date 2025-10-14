@@ -18,6 +18,7 @@ export type Candidate = {
   oaLinks?: Record<string, unknown> | null;
   integrityFlags?: unknown;
   aiRationale?: Record<string, unknown> | null;
+  locatorSnippets?: unknown;
   triageStatus: string;
   createdAt: string;
 };

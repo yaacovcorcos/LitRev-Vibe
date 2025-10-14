@@ -43,6 +43,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       id: candidate.id,
       metadata: candidate.metadata as Record<string, unknown>,
       searchAdapter: candidate.searchAdapter,
+      locatorSnippets: candidate.locatorSnippets as unknown,
     },
   });
 
@@ -73,6 +74,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       id: candidate.id,
       metadata: candidate.metadata as Record<string, unknown>,
       searchAdapter: candidate.searchAdapter,
+      locatorSnippets: candidate.locatorSnippets as unknown,
     },
     question: parsed.data.question,
   });
