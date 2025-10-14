@@ -37,7 +37,8 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
 - `lib/integrity/` — Integrity feed ingestion stubs, queue jobs, scheduler helpers.
 - `lib/ledger/` — Locator status helpers and related utilities.
-- `lib/compose/` — Compose workflow helpers (citation validator, etc.).
+- `lib/compose/` — Compose workflow helpers (citation validator, job contracts, resumable state utilities).
+- `lib/jobs/` — Job persistence helpers bridging Prisma records with queue metadata.
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
 - `lib/ai/` — AI orchestration helpers (OpenAI client, triage rationale jobs, Ask-AI).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).

@@ -4,6 +4,12 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-16 — Compose Job Contract Scaffolding
+- Defined compose job payload + resumable state with Zod, supporting per-section metadata and citation requirements.
+- Added Prisma-backed job creation helper that logs enqueue events to the activity timeline.
+- Wired compose job enqueue pathway to BullMQ (job IDs align with Prisma records) and stubbed worker handler for upcoming implementation.
+- Refreshed File Index documentation to reflect new compose/job modules.
+
 ### 2025-10-15 — Cross-Device Triage & Ledger Review
 - Ran responsive pass for Search & Triage plus Evidence Ledger across 390–1440px viewports; logged findings in `docs/reviews/2025-10-15-triage-ledger-cross-device.md`.
 - Tweaked triage search form padding (`p-4 sm:p-6`) so mobile widths retain comfortable spacing without crowding controls.
