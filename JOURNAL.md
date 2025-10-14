@@ -4,6 +4,25 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-16 — Compose API & Hooks
+- Added `/api/projects/:id/compose` endpoint to enqueue literature review jobs with validation and project guardrails, plus `/api/projects/:id/jobs/:jobId` for polling status.
+- Created React Query hooks for enqueuing compose jobs and polling job records, laying groundwork for the Draft workspace integration.
+- Covered new routes with Vitest (mocked Prisma/job modules) to ensure enqueue + status flows behave as expected.
+- Introduced Draft workspace page with section list, compose trigger wired to ledger prerequisites, and read-only Tiptap viewer for generated content.
+- Added suggestion workflow scaffolding: Prisma model, generation stubs, API endpoints, and UI controls for requesting/accepting AI draft improvements.
+- Hardened compose worker retries by rehydrating persisted state to prevent duplicate draft sections and improved version tracking payloads.
+
+### 2025-10-16 — Compose Worker Implementation
+- Implemented `processComposeJob` to validate ledger citations, persist draft sections, and update job progress with resumable state snapshots.
+- Added activity logging per generated section and deterministic draft content fallback that references ledger metadata.
+- Backed the worker with Vitest coverage using mocked Prisma transactions and job helpers to verify success and failure paths.
+
+### 2025-10-16 — Compose Job Contract Scaffolding
+- Defined compose job payload + resumable state with Zod, supporting per-section metadata and citation requirements.
+- Added Prisma-backed job creation helper that logs enqueue events to the activity timeline.
+- Wired compose job enqueue pathway to BullMQ (job IDs align with Prisma records) and stubbed worker handler for upcoming implementation.
+- Refreshed File Index documentation to reflect new compose/job modules.
+
 ### 2025-10-15 — Cross-Device Triage & Ledger Review
 - Ran responsive pass for Search & Triage plus Evidence Ledger across 390–1440px viewports; logged findings in `docs/reviews/2025-10-15-triage-ledger-cross-device.md`.
 - Tweaked triage search form padding (`p-4 sm:p-6`) so mobile widths retain comfortable spacing without crowding controls.

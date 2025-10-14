@@ -28,6 +28,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `components/planning/` — Planning workspace components (section cards, editors).
 - `components/activity/` — Activity & undo timeline components.
 - `components/triage/` — Triage candidate cards and listing UI.
+- `components/draft/` — Draft workspace components (Tiptap editor wrapper, section listing).
 - `components/providers/` — Cross-cutting providers (React Query, etc.).
 - `components/ui/` — shadcn/ui generated primitives (buttons, cards, textarea, etc.).
 - `app/project/[id]/ledger/` — Evidence Ledger workspace surface and inspector.
@@ -35,9 +36,14 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-keep-candidate.ts` — Mutation helper for enforcing locator requirement before keeping to ledger.
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
 - `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
+- `hooks/use-compose.ts` — Helpers for enqueuing compose jobs and polling job status.
+- `hooks/use-draft-sections.ts` — Fetch draft sections for the compose workspace.
+- `hooks/use-draft-suggestions.ts` — Manage AI suggestions (list, request, resolve) for draft sections.
 - `lib/integrity/` — Integrity feed ingestion stubs, queue jobs, scheduler helpers.
 - `lib/ledger/` — Locator status helpers and related utilities.
-- `lib/compose/` — Compose workflow helpers (citation validator, etc.).
+- `lib/compose/` — Compose workflow helpers (citation validator, job contracts, worker processor, resumable state utilities).
+- `lib/compose/versions.ts` — Helpers for recording and rolling back draft section versions.
+- `lib/jobs/` — Job persistence helpers bridging Prisma records with queue metadata.
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
 - `lib/ai/` — AI orchestration helpers (OpenAI client, triage rationale jobs, Ask-AI).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).

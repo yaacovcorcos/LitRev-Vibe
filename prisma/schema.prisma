@@ -14,6 +14,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum DraftSuggestionType {
+  improvement
+  clarity
+  expansion
+}
+
+enum DraftSuggestionStatus {
+  pending
+  accepted
+  dismissed
+}
+
 model Project {
   id          String   @id @default(cuid())
   name        String
@@ -96,6 +108,8 @@ model DraftSection {
 
   project   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   citations DraftSectionOnLedger[]
+  suggestions DraftSuggestion[]
+  versions  DraftSectionVersion[]
 }
 
 model DraftSectionOnLedger {
@@ -108,6 +122,41 @@ model DraftSectionOnLedger {
   ledgerEntry  LedgerEntry  @relation(fields: [ledgerEntryId], references: [id], onDelete: Cascade)
 
   @@id([draftSectionId, ledgerEntryId])
+}
+
+model DraftSuggestion {
+  id             String   @id @default(cuid())
+  projectId      String
+  draftSectionId String
+  suggestionType DraftSuggestionType @default(improvement)
+  summary        String?
+  diff           Json
+  content        Json?
+  status         DraftSuggestionStatus @default(pending)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  resolvedAt     DateTime?
+  resolvedBy     String?
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  section DraftSection @relation(fields: [draftSectionId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([draftSectionId])
+}
+
+model DraftSectionVersion {
+  id             String   @id @default(cuid())
+  draftSectionId String
+  version        Int
+  status         String
+  content        Json
+  createdAt      DateTime @default(now())
+
+  draftSection DraftSection @relation(fields: [draftSectionId], references: [id], onDelete: Cascade)
+
+  @@unique([draftSectionId, version])
+  @@index([draftSectionId])
 }
 
 model Job {

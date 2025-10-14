@@ -1,6 +1,8 @@
 import { QueueEvents, Worker, JobsOptions } from 'bullmq';
 import pino from 'pino';
 
+import { COMPOSE_QUEUE_JOB_NAME } from "@/lib/compose/jobs";
+import { processComposeJob } from "@/lib/compose/processor";
 import { processSearchJob, searchJobSchema } from "@/lib/search/jobs";
 import { processTriageRationaleJob } from "@/lib/ai/jobs";
 import { processIntegrityIngestionJob } from "@/lib/integrity/jobs";
@@ -29,6 +31,8 @@ export const defaultWorker = new Worker(
         return processIntegrityIngestionJob();
       case 'snippets:extract':
         return processSnippetExtractionJob(job.data);
+      case COMPOSE_QUEUE_JOB_NAME:
+        return processComposeJob(job.data);
       default:
         logger.warn({ jobName: job.name }, 'Unhandled job type, echoing payload');
         return job.data;
