@@ -290,7 +290,6 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
               >
                 {askMutation.isPending ? "Asking…" : "Ask"}
               </Button>
-              {askMutation.isError ? <span className="text-xs text-destructive">Request failed.</span> : null}
             </div>
             {askResponse ? (
               <div className="space-y-3 rounded-md bg-muted/40 p-3 text-sm text-foreground/90">
