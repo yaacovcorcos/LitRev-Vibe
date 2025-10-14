@@ -11,6 +11,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Limit triage queue to pending candidates and hide kept references post-enforcement.
 - Capture locator quotes and sources during keep + inspector workflows.
 - Log activity entries when references move from triage to ledger.
+- Add locator status helper with UI badges plus unit tests.
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.

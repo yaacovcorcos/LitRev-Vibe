@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAddLocator, useLedgerEntries, type LedgerEntry } from "@/hooks/use-ledger";
 import { useProject } from "@/hooks/use-projects";
+import { determineLocatorStatus, type LocatorStatus } from "@/lib/ledger/status";
 import { cn } from "@/lib/utils";
 
 const pageSize = 20;
@@ -241,14 +242,14 @@ export default function LedgerPage() {
                   const journal = metadata["journal"];
                   const publisher = metadata["publisher"];
                   const venue = typeof journal === "string" ? journal : typeof publisher === "string" ? publisher : undefined;
-                  const hasLocators = Array.isArray(entry.locators) && entry.locators.length > 0;
-
-                  const statusLabel = hasLocators && entry.verifiedByHuman ? "Verified" : hasLocators ? "Review" : "Pending locator";
-                  const statusClasses = cn("uppercase text-[11px]", {
-                    "border-amber-300 text-amber-700": hasLocators && !entry.verifiedByHuman,
-                    "border-destructive/40 text-destructive": !hasLocators,
+                  const locatorStatus = determineLocatorStatus({
+                    locators: entry.locators,
+                    verifiedByHuman: entry.verifiedByHuman,
                   });
-                  const statusVariant = hasLocators && entry.verifiedByHuman ? "default" : "outline";
+
+                  const statusLabel = getLocatorStatusLabel(locatorStatus);
+                  const statusVariant = getLocatorStatusVariant(locatorStatus);
+                  const statusClasses = getLocatorStatusClasses(locatorStatus);
 
                   return (
                     <li key={entry.id}>
@@ -530,9 +531,9 @@ type InspectorStatusBannerProps = {
 };
 
 function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
-  const hasLocators = Array.isArray(entry.locators) && entry.locators.length > 0;
+  const status = determineLocatorStatus({ locators: entry.locators, verifiedByHuman: entry.verifiedByHuman });
 
-  if (!hasLocators) {
+  if (status === "pending_locator") {
     return (
       <div className="mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
         <p className="font-semibold uppercase tracking-wide">Pending locator</p>
@@ -543,7 +544,7 @@ function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
     );
   }
 
-  if (entry.verifiedByHuman) {
+  if (status === "locator_verified") {
     return (
       <div className="mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground/80">
         <p className="font-semibold uppercase tracking-wide text-primary">Locator verified</p>
@@ -710,4 +711,27 @@ function LocatorField({ id, label, placeholder, value, onChange, disabled }: Loc
       />
     </div>
   );
+}
+
+function getLocatorStatusLabel(status: LocatorStatus) {
+  switch (status) {
+    case "locator_verified":
+      return "Verified";
+    case "locator_pending_review":
+      return "Review";
+    case "pending_locator":
+    default:
+      return "Pending locator";
+  }
+}
+
+function getLocatorStatusVariant(status: LocatorStatus) {
+  return status === "locator_verified" ? "default" : "outline";
+}
+
+function getLocatorStatusClasses(status: LocatorStatus) {
+  return cn("uppercase text-[11px]", {
+    "border-amber-300 text-amber-700": status === "locator_pending_review",
+    "border-destructive/40 text-destructive": status === "pending_locator",
+  });
 }
