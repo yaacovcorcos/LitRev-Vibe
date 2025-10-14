@@ -16,6 +16,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Logged activity entries when candidates are kept, providing immediate audit feedback.
 - Introduced locator status helper (pending/review/verified) with UI badges and unit coverage.
 - Added citation validator module enforcing ledger-only, verified locators with Vitest coverage.
+- Wired triage rationale + Ask-AI flows to OpenAI (with graceful fallbacks when API unavailable).
 
 ### 2025-10-14 — Triage AI Scaffolding
 - Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.
