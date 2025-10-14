@@ -42,6 +42,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `lib/integrity/` — Integrity feed ingestion stubs, queue jobs, scheduler helpers.
 - `lib/ledger/` — Locator status helpers and related utilities.
 - `lib/compose/` — Compose workflow helpers (citation validator, job contracts, worker processor, resumable state utilities).
+- `lib/compose/versions.ts` — Helpers for recording and rolling back draft section versions.
 - `lib/jobs/` — Job persistence helpers bridging Prisma records with queue metadata.
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
 - `lib/ai/` — AI orchestration helpers (OpenAI client, triage rationale jobs, Ask-AI).

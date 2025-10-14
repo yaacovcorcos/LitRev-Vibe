@@ -35,24 +35,22 @@ export async function GET(_request: Request, { params }: RouteParams) {
           },
         },
       },
+      versions: {
+        orderBy: { version: "desc" },
+        take: 5,
+      },
     },
   });
 
   return NextResponse.json({
-    sections: sections.map((section) => ({
-      id: section.id,
-      projectId: section.projectId,
-      sectionType: section.sectionType,
-      content: section.content,
-      status: section.status,
-      version: section.version,
-      createdAt: section.createdAt,
-      updatedAt: section.updatedAt,
-      approvedAt: section.approvedAt,
-      ledgerEntries: section.citations.map((citation) => ({
-        id: citation.ledgerEntry.id,
-        citationKey: citation.ledgerEntry.citationKey,
-        verifiedByHuman: citation.ledgerEntry.verifiedByHuman,
+    sections: sections.map(({ citations, versions, ...section }) => ({
+      ...section,
+      ledgerEntries: citations.map((citation) => citation.ledgerEntry),
+      versionHistory: versions.map(({ id, version, status, createdAt }) => ({
+        id,
+        version,
+        status,
+        createdAt,
       })),
     })),
   });

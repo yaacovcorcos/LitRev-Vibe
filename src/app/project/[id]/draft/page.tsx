@@ -103,18 +103,11 @@ export default function DraftPage() {
       return;
     }
 
-    requestSuggestion.mutate(
-      {
-        projectId,
-        draftSectionId: activeSection.id,
-        suggestionType: "improvement",
-      },
-      {
-        onSettled: () => {
-          suggestionsQuery.refetch();
-        },
-      },
-    );
+    requestSuggestion.mutate({
+      projectId,
+      draftSectionId: activeSection.id,
+      suggestionType: "improvement",
+    });
   };
 
   const handleResolveSuggestion = (suggestionId: string, action: "accept" | "dismiss") => {
@@ -122,35 +115,24 @@ export default function DraftPage() {
       return;
     }
 
-    resolveSuggestion.mutate(
-      {
-        projectId,
-        suggestionId,
-        action,
-      },
-      {
-        onSuccess: () => {
-          suggestionsQuery.refetch();
-          refetch();
-        },
-      },
-    );
+    resolveSuggestion.mutate({
+      projectId,
+      suggestionId,
+      action,
+    });
   };
 
   useEffect(() => {
-    if (!jobStatus.data) {
+    const status = jobStatus.data?.status;
+    if (!status || status === lastJobStatus) {
       return;
     }
 
-    if (jobStatus.data.status !== lastJobStatus) {
-      setLastJobStatus(jobStatus.data.status);
-      if (jobStatus.data.status === "completed") {
-        setTimeout(() => {
-          refetch();
-        }, 500);
-      }
+    setLastJobStatus(status);
+    if (status === "completed") {
+      refetch();
     }
-  }, [jobStatus.data, lastJobStatus, refetch]);
+  }, [jobStatus.data?.status, lastJobStatus, refetch]);
 
   return (
     <div className="space-y-8">
@@ -203,7 +185,6 @@ export default function DraftPage() {
 
       {currentJobId ? (
         <ComposeStatusBanner
-          projectId={projectId}
           jobId={currentJobId}
           status={jobStatus.data?.status}
           progress={jobStatus.data?.progress ?? 0}
@@ -368,7 +349,6 @@ export default function DraftPage() {
 }
 
 type ComposeStatusBannerProps = {
-  projectId: string | null;
   jobId: string | null;
   status?: string;
   progress?: number;
@@ -403,8 +383,8 @@ type SuggestionDiffProps = {
 };
 
 function SuggestionDiff({ diff }: SuggestionDiffProps) {
-  const payload = diff as { before?: string; after?: string; type?: string };
-  if (!payload || (typeof payload.before !== "string" && typeof payload.after !== "string")) {
+  const payload = parseSuggestionDiff(diff);
+  if (!payload) {
     return null;
   }
 
@@ -422,4 +402,27 @@ function SuggestionDiff({ diff }: SuggestionDiffProps) {
       ) : null}
     </div>
   );
+}
+
+type ParsedSuggestionDiff = {
+  before?: string;
+  after?: string;
+  type?: string;
+};
+
+function parseSuggestionDiff(value: unknown): ParsedSuggestionDiff | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const before = typeof candidate.before === "string" ? candidate.before : undefined;
+  const after = typeof candidate.after === "string" ? candidate.after : undefined;
+  const type = typeof candidate.type === "string" ? candidate.type : undefined;
+
+  if (!before && !after) {
+    return null;
+  }
+
+  return { before, after, type } satisfies ParsedSuggestionDiff;
 }

@@ -15,6 +15,12 @@ export type DraftSectionRecord = {
     citationKey: string;
     verifiedByHuman: boolean;
   }>;
+  versionHistory?: Array<{
+    id: string;
+    version: number;
+    status: string;
+    createdAt: string;
+  }>;
 };
 
 type DraftSectionsResponse = {

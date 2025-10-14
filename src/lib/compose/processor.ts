@@ -9,6 +9,7 @@ import {
   type ComposeJobState,
   type ComposeSectionStatus,
   composeJobQueuePayloadSchema,
+  composeJobStateSchema,
 } from "./jobs";
 
 export type ComposeJobResult = {
@@ -29,23 +30,39 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
 
   const { jobId, projectId } = payload;
   const totalSections = payload.sections.length;
-  const state = cloneState(payload.state);
+  let state = cloneState(payload.state);
+
+  const persisted = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: {
+      resumableState: true,
+    },
+  });
+
+  if (persisted?.resumableState) {
+    const parsed = composeJobStateSchema.safeParse(persisted.resumableState);
+    if (parsed.success) {
+      state = mergeStateWithPayload(parsed.data, payload);
+    }
+  }
 
   try {
     await updateJobRecord({
       jobId,
       status: "in_progress",
-      progress: 0,
+      progress: completedRatio(state, totalSections),
       resumableState: state,
     });
 
-    let completedSections = 0;
-
     for (let index = 0; index < payload.sections.length; index++) {
       const sectionInput = payload.sections[index];
-      const sectionState = state.sections[index];
-      const nowIso = new Date().toISOString();
+      const sectionState = ensureSectionState(state, sectionInput, index);
 
+      if (sectionState.status === "completed" && sectionState.draftSectionId) {
+        continue;
+      }
+
+      const nowIso = new Date().toISOString();
       state.currentSectionIndex = index;
       setSectionState(sectionState, "running", nowIso);
       sectionState.attempts += 1;
@@ -53,20 +70,21 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
       await updateJobRecord({
         jobId,
         status: "in_progress",
-        progress: completedSections / totalSections,
+        progress: completedRatio(state, totalSections),
         resumableState: state,
       });
 
-      const ledgerEntries = await fetchLedgerEntries(projectId, sectionInput.ledgerEntryIds);
+      const ledgerEntries = await fetchLedgerEntries(projectId, sectionState.ledgerEntryIds);
 
-      validateCitations(sectionState.key, sectionInput.ledgerEntryIds, ledgerEntries);
+      validateCitations(sectionState.key, sectionState.ledgerEntryIds, ledgerEntries);
 
       const content = buildDraftContent(sectionInput.title, sectionInput.sectionType, payload.researchQuestion, payload.narrativeVoice, ledgerEntries);
+      const existingSectionId = sectionState.draftSectionId ?? sectionInput.sectionId ?? null;
 
       const draftSection = await prisma.$transaction(async (tx) => {
-        const existing = sectionInput.sectionId
+        const existing = existingSectionId
           ? await tx.draftSection.findUnique({
-            where: { id: sectionInput.sectionId },
+            where: { id: existingSectionId },
           })
           : null;
 
@@ -114,8 +132,6 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
       setSectionState(sectionState, "completed", new Date().toISOString());
       sectionState.draftSectionId = draftSection.id;
 
-      completedSections += 1;
-
       await logActivity({
         projectId,
         action: "draft.section_generated",
@@ -128,19 +144,30 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
         },
       });
 
-      const isFinalSection = completedSections === totalSections;
+      const isFinalSection = completedRatio(state, totalSections) === 1;
 
       await updateJobRecord({
         jobId,
         status: isFinalSection ? "completed" : "in_progress",
-        progress: completedSections / totalSections,
+        progress: completedRatio(state, totalSections),
         resumableState: state,
         ...(isFinalSection ? { completedAt: new Date() } : {}),
       });
     }
 
+    const finalRatio = completedRatio(state, totalSections);
+    if (finalRatio === 1) {
+      await updateJobRecord({
+        jobId,
+        status: "completed",
+        progress: finalRatio,
+        resumableState: state,
+        completedAt: new Date(),
+      });
+    }
+
     return {
-      completedSections,
+      completedSections: Math.round(finalRatio * totalSections),
       totalSections,
     };
   } catch (error) {
@@ -174,6 +201,57 @@ function setSectionState(section: ComposeJobState["sections"][number], status: C
   } else {
     delete section.lastError;
   }
+}
+
+function ensureSectionState(state: ComposeJobState, sectionInput: ComposeJobQueuePayload["sections"][number], index: number) {
+  if (!state.sections[index]) {
+    state.sections[index] = {
+      key: sectionInput.sectionId ?? fallbackSectionKey(sectionInput.sectionType, index),
+      sectionType: sectionInput.sectionType,
+      ledgerEntryIds: sectionInput.ledgerEntryIds,
+      status: "pending",
+      attempts: 0,
+    };
+  } else {
+    state.sections[index].ledgerEntryIds = sectionInput.ledgerEntryIds;
+    state.sections[index].sectionType = sectionInput.sectionType;
+    state.sections[index].key ||= fallbackSectionKey(sectionInput.sectionType, index);
+  }
+
+  return state.sections[index];
+}
+
+function mergeStateWithPayload(persisted: ComposeJobState, payload: ComposeJobQueuePayload) {
+  const hydrated = cloneState(persisted);
+
+  payload.sections.forEach((section, index) => {
+    if (!hydrated.sections[index]) {
+      hydrated.sections[index] = {
+        key: section.sectionId ?? fallbackSectionKey(section.sectionType, index),
+        sectionType: section.sectionType,
+        ledgerEntryIds: section.ledgerEntryIds,
+        status: "pending",
+        attempts: 0,
+      };
+    } else {
+      hydrated.sections[index].ledgerEntryIds = section.ledgerEntryIds;
+      hydrated.sections[index].key ||= fallbackSectionKey(section.sectionType, index);
+    }
+  });
+
+  return hydrated;
+}
+
+function completedRatio(state: ComposeJobState, totalSections: number) {
+  if (totalSections === 0) {
+    return 1;
+  }
+  const count = state.sections.filter((section) => section.status === "completed").length;
+  return Math.min(1, count / totalSections);
+}
+
+function fallbackSectionKey(sectionType: string, index: number) {
+  return `${sectionType}-${index + 1}`;
 }
 
 async function fetchLedgerEntries(projectId: string, ledgerIds: string[]) {

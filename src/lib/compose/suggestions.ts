@@ -185,8 +185,8 @@ export async function resolveDraftSuggestion(
 }
 
 function extractPrimaryParagraph(content: Prisma.JsonValue | null | undefined) {
-  const doc = (content as Record<string, unknown> | null) ?? null;
-  if (!doc || typeof doc !== "object") {
+  const doc = asJsonObject(content);
+  if (!doc) {
     return "";
   }
 
@@ -225,8 +225,8 @@ function buildImprovedParagraph(base: string, voice: CreateSuggestionInput["narr
 }
 
 function appendParagraph(content: Prisma.JsonValue | null | undefined, paragraph: string) {
-  const doc = (content as Record<string, unknown> | null) ?? null;
-  const baseDoc = doc && typeof doc === "object" ? doc : { type: "doc", content: [] };
+  const doc = asJsonObject(content);
+  const baseDoc = doc ?? { type: "doc", content: [] };
   const currentContent = Array.isArray((baseDoc as Record<string, unknown>).content)
     ? ((baseDoc as Record<string, unknown>).content as Array<Record<string, unknown>>)
     : [];
@@ -250,4 +250,12 @@ function appendParagraph(content: Prisma.JsonValue | null | undefined, paragraph
 
 function toJson<T>(value: T) {
   return JSON.parse(JSON.stringify(value ?? null)) as Prisma.JsonValue;
+}
+
+function asJsonObject(value: Prisma.JsonValue | null | undefined): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
 }

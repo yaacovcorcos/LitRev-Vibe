@@ -49,6 +49,16 @@ describe("GET /api/projects/:id/draft", () => {
             },
           },
         ],
+        versions: [
+          {
+            id: "version-1",
+            draftSectionId: "draft-1",
+            version: 1,
+            status: "draft",
+            content: {},
+            createdAt: new Date("2025-10-15T00:00:00Z"),
+          },
+        ],
       },
     ]);
 
@@ -64,6 +74,13 @@ describe("GET /api/projects/:id/draft", () => {
           id: "ledger-1",
           citationKey: "Smith2024",
           verifiedByHuman: true,
+        },
+      ],
+      versionHistory: [
+        {
+          id: "version-1",
+          version: 1,
+          status: "draft",
         },
       ],
     });

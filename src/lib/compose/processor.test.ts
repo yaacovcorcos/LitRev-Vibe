@@ -8,6 +8,7 @@ const hoisted = vi.hoisted(() => {
     ledgerFindMany: vi.fn(),
     transactionMock: vi.fn(),
     queueAdd: vi.fn(),
+    jobFindUnique: vi.fn(async () => ({ resumableState: null })),
   };
 });
 
@@ -27,6 +28,9 @@ vi.mock("@/generated/prisma", () => ({
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    job: {
+      findUnique: hoisted.jobFindUnique,
+    },
     ledgerEntry: {
       findMany: hoisted.ledgerFindMany,
     },
@@ -53,6 +57,7 @@ const {
   ledgerFindMany,
   transactionMock,
   queueAdd,
+  jobFindUnique,
 } = hoisted;
 
 import { buildInitialState } from "./jobs";
@@ -115,6 +120,7 @@ function createTransactionClient(overrides: Record<string, unknown> = {}) {
 describe("processComposeJob", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    jobFindUnique.mockResolvedValue({ resumableState: null });
   });
 
   it("generates draft sections and updates job progress", async () => {

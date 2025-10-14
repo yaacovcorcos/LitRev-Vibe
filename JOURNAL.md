@@ -10,6 +10,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Covered new routes with Vitest (mocked Prisma/job modules) to ensure enqueue + status flows behave as expected.
 - Introduced Draft workspace page with section list, compose trigger wired to ledger prerequisites, and read-only Tiptap viewer for generated content.
 - Added suggestion workflow scaffolding: Prisma model, generation stubs, API endpoints, and UI controls for requesting/accepting AI draft improvements.
+- Hardened compose worker retries by rehydrating persisted state to prevent duplicate draft sections and improved version tracking payloads.
 
 ### 2025-10-16 — Compose Worker Implementation
 - Implemented `processComposeJob` to validate ledger citations, persist draft sections, and update job progress with resumable state snapshots.
