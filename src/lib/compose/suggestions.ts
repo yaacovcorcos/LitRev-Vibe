@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Prisma } from "@/generated/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { prisma } from "@/lib/prisma";
+import { ensureDraftSectionVersion, recordDraftSectionVersion } from "@/lib/compose/versions";
 
 const suggestionInputSchema = z.object({
   projectId: z.string(),
@@ -141,13 +142,35 @@ export async function resolveDraftSuggestion(
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.draftSection.update({
+      const section = await tx.draftSection.findUnique({
+        where: { id: suggestion.draftSectionId },
+      });
+
+      if (!section) {
+        throw new Error("Draft section not found for suggestion");
+      }
+
+      await ensureDraftSectionVersion(tx, {
+        id: section.id,
+        version: section.version,
+        status: section.status,
+        content: section.content,
+      });
+
+      const updatedSection = await tx.draftSection.update({
         where: { id: suggestion.draftSectionId },
         data: {
           content: suggestion.content,
-          version: suggestion.section.version + 1,
+          version: section.version + 1,
           status: "draft",
         },
+      });
+
+      await recordDraftSectionVersion(tx, {
+        id: updatedSection.id,
+        version: updatedSection.version,
+        status: updatedSection.status,
+        content: updatedSection.content,
       });
 
       await tx.draftSuggestion.update({

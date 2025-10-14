@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { updateJobRecord } from "@/lib/jobs";
 
 import { assertCitationsValid } from "./citation-validator";
+import { ensureDraftSectionVersion, recordDraftSectionVersion } from "./versions";
 import {
   type ComposeJobQueuePayload,
   type ComposeJobState,
@@ -94,6 +95,15 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
           throw new Error(`Draft section ${existing.id} does not belong to project ${projectId}`);
         }
 
+        if (existing) {
+          await ensureDraftSectionVersion(tx, {
+            id: existing.id,
+            version: existing.version,
+            status: existing.status,
+            content: existing.content,
+          });
+        }
+
         const record = existing
           ? await tx.draftSection.update({
             where: { id: existing.id },
@@ -113,6 +123,13 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
               version: 1,
             },
           });
+
+        await recordDraftSectionVersion(tx, {
+          id: record.id,
+          version: record.version,
+          status: record.status,
+          content: record.content,
+        });
 
         await tx.draftSectionOnLedger.deleteMany({
           where: { draftSectionId: record.id },
