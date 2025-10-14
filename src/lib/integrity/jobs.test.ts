@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-declare const global: { __integrityMockCount?: number };
-
-global.__integrityMockCount = 0;
+const ingestIntegrityFeedsMock = vi.fn(
+  async ({ onCandidateUpdate }: { onCandidateUpdate?: () => void }) => {
+    if (onCandidateUpdate) {
+      onCandidateUpdate();
+      onCandidateUpdate();
+    }
+  },
+);
 
 vi.mock("@/lib/queue/queue", () => ({
   queues: {
@@ -13,20 +18,14 @@ vi.mock("@/lib/queue/queue", () => ({
 }));
 
 vi.mock("@/lib/integrity/feeds", () => ({
-  ingestIntegrityFeeds: vi.fn(async ({ onCandidateUpdate }: { onCandidateUpdate?: () => void }) => {
-    if (onCandidateUpdate) {
-      onCandidateUpdate();
-      onCandidateUpdate();
-    }
-    global.__integrityMockCount = (global.__integrityMockCount ?? 0) + 1;
-  }),
+  ingestIntegrityFeeds: ingestIntegrityFeedsMock,
 }));
 
 const { enqueueIntegrityIngestionJob, processIntegrityIngestionJob } = await import("./jobs");
 
 describe("integrity jobs", () => {
   beforeEach(() => {
-    global.__integrityMockCount = 0;
+    vi.clearAllMocks();
   });
 
   it("queues integrity job", async () => {
@@ -37,6 +36,6 @@ describe("integrity jobs", () => {
   it("processes integrity job and counts updates", async () => {
     const result = await processIntegrityIngestionJob();
     expect(result.updatedCandidates).toBe(2);
-    expect(global.__integrityMockCount).toBe(1);
+    expect(ingestIntegrityFeedsMock).toHaveBeenCalledTimes(1);
   });
 });
