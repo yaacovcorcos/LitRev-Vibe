@@ -33,6 +33,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-candidate-rationale.ts` — React Query helpers for fetching and asking AI about a candidate.
 - `hooks/use-keep-candidate.ts` — Mutation helper for enforcing locator requirement before keeping to ledger.
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
+- `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
 - `lib/integrity/` — Integrity feed ingestion stubs and helpers.
 - `lib/ledger/` — Locator status helpers and related utilities.
 - `lib/compose/` — Compose workflow helpers (citation validator, etc.).

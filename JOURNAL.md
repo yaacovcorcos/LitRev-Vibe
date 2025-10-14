@@ -23,6 +23,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Created triage rationale batch job (OpenAI) with queue retries + metrics schema.
 - Updated Ask-AI prompts to prioritize stored locator snippets (PDF fallback) before abstract quotes.
 - Captured locator summary Storybook coverage for responsive QA.
+- Added triage "Refresh snippets" action to enqueue PDF snippet extraction per candidate.
 - Added queue job + cron hook stub for nightly integrity feed ingestion.
 
 ### 2025-10-14 — Triage AI Scaffolding
