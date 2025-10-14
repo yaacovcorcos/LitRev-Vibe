@@ -13,6 +13,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Required locators during triage keep flows (API + UI) to uphold “no locator, no ledger” policy.
 - Filtered triage queue to pending entries so kept references move directly into the Evidence Ledger.
 - Captured locator quotes + sources in both keep flow and inspector to preserve provenance context.
+- Logged activity entries when candidates are kept, providing immediate audit feedback.
 
 ### 2025-10-14 — Triage AI Scaffolding
 - Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.
