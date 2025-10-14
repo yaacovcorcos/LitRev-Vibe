@@ -9,13 +9,16 @@ const locatorSchema = z
     paragraph: z.number().int().min(1, "Paragraph must be a positive integer").optional(),
     sentence: z.number().int().min(1, "Sentence must be a positive integer").optional(),
     note: z.string().trim().min(1, "Note cannot be empty").max(400, "Note is too long").optional(),
+    quote: z.string().trim().min(1, "Quote cannot be empty").max(1000, "Quote is too long").optional(),
+    source: z.string().trim().min(1, "Source cannot be empty").max(200, "Source is too long").optional(),
   })
   .refine(
     (value) =>
       value.page !== undefined ||
       value.paragraph !== undefined ||
       value.sentence !== undefined ||
-      value.note !== undefined,
+      value.note !== undefined ||
+      value.quote !== undefined,
     {
       message: "Provide at least one locator detail.",
     },

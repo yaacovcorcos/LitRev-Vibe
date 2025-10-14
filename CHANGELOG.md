@@ -9,6 +9,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Surface locator verification status and pending warnings in the ledger workspace.
 - Enforce locator requirement during triage “keep” flow with API + UI guardrails.
 - Limit triage queue to pending candidates and hide kept references post-enforcement.
+- Capture locator quotes and sources during keep + inspector workflows.
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.

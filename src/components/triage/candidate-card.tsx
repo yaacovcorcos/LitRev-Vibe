@@ -83,6 +83,8 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
     paragraph: "",
     sentence: "",
     note: "",
+    quote: "",
+    source: "",
   });
   const [locatorError, setLocatorError] = useState<string | null>(null);
 
@@ -109,7 +111,8 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
     locatorForm.page.trim() ||
       locatorForm.paragraph.trim() ||
       locatorForm.sentence.trim() ||
-      locatorForm.note.trim(),
+      locatorForm.note.trim() ||
+      locatorForm.quote.trim(),
   );
 
   const parseLocatorNumber = (value: string, label: string) => {
@@ -164,6 +167,16 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
         locatorPayload.note = note;
       }
 
+      const quote = locatorForm.quote.trim();
+      if (quote) {
+        locatorPayload.quote = quote;
+      }
+
+      const source = locatorForm.source.trim();
+      if (source) {
+        locatorPayload.source = source;
+      }
+
       await keepMutation.mutateAsync({
         projectId,
         candidateId: candidate.id,
@@ -176,6 +189,8 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
         paragraph: "",
         sentence: "",
         note: "",
+        quote: "",
+        source: "",
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -344,24 +359,62 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
                       }
                     />
                   </div>
-                  <div className="space-y-1">
-                    <Label htmlFor={`${candidate.id}-keep-note`} className="text-xs font-medium text-muted-foreground">
-                      Note
-                    </Label>
-                    <Textarea
-                      id={`${candidate.id}-keep-note`}
-                      rows={2}
-                      value={locatorForm.note}
-                      onChange={(event) =>
-                        setLocatorForm((prev) => ({
-                          ...prev,
-                          note: event.target.value,
-                        }))
-                      }
-                      className="text-sm"
-                      disabled={keepMutation.isPending}
-                    />
-                  </div>
+              <div className="space-y-1">
+                <Label htmlFor={`${candidate.id}-keep-note`} className="text-xs font-medium text-muted-foreground">
+                  Note
+                </Label>
+                <Textarea
+                  id={`${candidate.id}-keep-note`}
+                  rows={2}
+                  value={locatorForm.note}
+                  onChange={(event) =>
+                    setLocatorForm((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                    }))
+                  }
+                  className="text-sm"
+                  disabled={keepMutation.isPending}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor={`${candidate.id}-keep-quote`} className="text-xs font-medium text-muted-foreground">
+                  Quote
+                </Label>
+                <Textarea
+                  id={`${candidate.id}-keep-quote`}
+                  rows={3}
+                  value={locatorForm.quote}
+                  placeholder="Paste the exact supporting text."
+                  onChange={(event) =>
+                    setLocatorForm((prev) => ({
+                      ...prev,
+                      quote: event.target.value,
+                    }))
+                  }
+                  className="text-sm"
+                  disabled={keepMutation.isPending}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor={`${candidate.id}-keep-source`} className="text-xs font-medium text-muted-foreground">
+                  Source
+                </Label>
+                <input
+                  id={`${candidate.id}-keep-source`}
+                  type="text"
+                  value={locatorForm.source}
+                  placeholder="e.g. PDF page 5, column 2"
+                  onChange={(event) =>
+                    setLocatorForm((prev) => ({
+                      ...prev,
+                      source: event.target.value,
+                    }))
+                  }
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={keepMutation.isPending}
+                />
+              </div>
                   {locatorError ? <p className="text-xs text-destructive">{locatorError}</p> : null}
                   {keepMutation.isError ? (
                     <p className="text-xs text-destructive">
@@ -373,21 +426,23 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
                     <Button type="submit" size="sm" disabled={keepMutation.isPending || !projectId}>
                       {keepMutation.isPending ? "Keeping…" : "Keep"}
                     </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        setLocatorForm({
-                          page: "",
-                          paragraph: "",
-                          sentence: "",
-                          note: "",
-                        })
-                      }
-                      disabled={keepMutation.isPending}
-                    >
-                      Reset
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    setLocatorForm({
+                      page: "",
+                      paragraph: "",
+                      sentence: "",
+                      note: "",
+                      quote: "",
+                      source: "",
+                    })
+                  }
+                  disabled={keepMutation.isPending}
+                >
+                  Reset
                     </Button>
                   </div>
                 </form>

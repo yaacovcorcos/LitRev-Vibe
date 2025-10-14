@@ -41,6 +41,8 @@ export default function LedgerPage() {
     paragraph: "",
     sentence: "",
     note: "",
+    quote: "",
+    source: "",
   });
   const [locatorError, setLocatorError] = useState<string | null>(null);
 
@@ -69,7 +71,8 @@ export default function LedgerPage() {
     locatorForm.page.trim() ||
       locatorForm.paragraph.trim() ||
       locatorForm.sentence.trim() ||
-      locatorForm.note.trim(),
+      locatorForm.note.trim() ||
+      locatorForm.quote.trim(),
   );
 
   const handleLocatorSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -126,6 +129,16 @@ export default function LedgerPage() {
         locatorPayload.note = note;
       }
 
+      const quote = locatorForm.quote.trim();
+      if (quote) {
+        locatorPayload.quote = quote;
+      }
+
+      const source = locatorForm.source.trim();
+      if (source) {
+        locatorPayload.source = source;
+      }
+
       await addLocatorMutation.mutateAsync({
         projectId,
         entryId: selectedEntry.id,
@@ -137,6 +150,8 @@ export default function LedgerPage() {
         paragraph: "",
         sentence: "",
         note: "",
+        quote: "",
+        source: "",
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -372,6 +387,44 @@ export default function LedgerPage() {
                         disabled={addLocatorMutation.isPending}
                       />
                     </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="locator-quote" className="text-xs font-medium text-muted-foreground">
+                        Quote
+                      </Label>
+                      <Textarea
+                        id="locator-quote"
+                        rows={3}
+                        placeholder="Paste the exact supporting text from the source."
+                        value={locatorForm.quote}
+                        onChange={(event) =>
+                          setLocatorForm((prev) => ({
+                            ...prev,
+                            quote: event.target.value,
+                          }))
+                        }
+                        className="text-sm"
+                        disabled={addLocatorMutation.isPending}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="locator-source" className="text-xs font-medium text-muted-foreground">
+                        Source
+                      </Label>
+                      <input
+                        id="locator-source"
+                        type="text"
+                        placeholder="e.g. PDF page 5, column 2"
+                        value={locatorForm.source}
+                        onChange={(event) =>
+                          setLocatorForm((prev) => ({
+                            ...prev,
+                            source: event.target.value,
+                          }))
+                        }
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={addLocatorMutation.isPending}
+                      />
+                    </div>
                     {locatorError ? <p className="text-xs text-destructive">{locatorError}</p> : null}
                     <div className="flex items-center gap-2">
                       <Button
@@ -391,6 +444,8 @@ export default function LedgerPage() {
                             paragraph: "",
                             sentence: "",
                             note: "",
+                            quote: "",
+                            source: "",
                           })
                         }
                         disabled={addLocatorMutation.isPending}
@@ -543,8 +598,10 @@ function LocatorSummary({ locator }: LocatorSummaryProps) {
   ].filter(Boolean);
 
   const note = typeof locator["note"] === "string" ? (locator["note"] as string) : null;
+  const quote = typeof locator["quote"] === "string" ? (locator["quote"] as string) : null;
+  const source = typeof locator["source"] === "string" ? (locator["source"] as string) : null;
 
-  if (parts.length === 0 && !note) {
+  if (parts.length === 0 && !note && !quote) {
     return <pre className="text-xs text-muted-foreground">{JSON.stringify(locator, null, 2)}</pre>;
   }
 
@@ -552,6 +609,12 @@ function LocatorSummary({ locator }: LocatorSummaryProps) {
     <div className="space-y-1 text-sm text-foreground/90">
       {parts.length > 0 ? <p>{parts.join(" · ")}</p> : null}
       {note ? <p className="text-xs text-muted-foreground/80">{note}</p> : null}
+      {quote ? (
+        <blockquote className="rounded border-l-2 border-muted-foreground/50 bg-muted/30 px-3 py-2 text-xs italic text-muted-foreground">
+          <q>{quote}</q>
+        </blockquote>
+      ) : null}
+      {source ? <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Source: {source}</p> : null}
     </div>
   );
 }

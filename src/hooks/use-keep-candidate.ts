@@ -11,6 +11,8 @@ type KeepCandidateInput = {
     paragraph?: number;
     sentence?: number;
     note?: string;
+    quote?: string;
+    source?: string;
   };
 };
 
