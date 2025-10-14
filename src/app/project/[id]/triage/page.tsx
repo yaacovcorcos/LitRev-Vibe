@@ -21,8 +21,10 @@ export default function TriagePage() {
   const projectId = params?.id ?? null;
 
   const { data: project, isLoading: projectLoading } = useProject(projectId);
-  const { data: candidates, isLoading: candidatesLoading, isRefetching } = useCandidates(projectId);
-  const enqueueSearch = useEnqueueSearch();
+  const page = 0;
+  const pageSize = 20;
+  const { data: candidateData, isLoading: candidatesLoading, isRefetching } = useCandidates(projectId, page, pageSize);
+  const enqueueSearch = useEnqueueSearch(page, pageSize);
 
   const [queryTerms, setQueryTerms] = useState("hypertension lifestyle modifications");
   const projectName = useMemo(() => {
@@ -137,7 +139,7 @@ export default function TriagePage() {
           <h2 className="text-lg font-semibold text-foreground">Pending candidates</h2>
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             {isRefetching ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            {candidates ? `${candidates.length} result${candidates.length === 1 ? "" : "s"}` : ""}
+            {candidateData ? `${candidateData.total} result${candidateData.total === 1 ? '' : 's'}` : ''}
           </span>
         </div>
 
@@ -147,9 +149,9 @@ export default function TriagePage() {
               <CandidateSkeleton key={index} />
             ))}
           </div>
-        ) : candidates && candidates.length > 0 ? (
+        ) : candidateData && candidateData.candidates.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2">
-            {candidates.map((candidate) => (
+            {candidateData.candidates.map((candidate) => (
               <CandidateCard key={candidate.id} candidate={candidate} />
             ))}
           </div>

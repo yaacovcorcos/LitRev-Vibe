@@ -46,11 +46,27 @@ export async function POST(request: Request, { params }: RouteParams) {
   return NextResponse.json({ jobId: job.id }, { status: 202 });
 }
 
-export async function GET(_request: Request, { params }: RouteParams) {
-  const candidates = await prisma.candidate.findMany({
-    where: { projectId: params.id },
-    orderBy: { createdAt: "desc" },
-  });
+export async function GET(request: Request, { params }: RouteParams) {
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10));
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') ?? '20', 10)));
 
-  return NextResponse.json(candidates);
+  const [candidates, total] = await prisma.$transaction([
+    prisma.candidate.findMany({
+      where: { projectId: params.id },
+      orderBy: { createdAt: 'desc' },
+      take: pageSize,
+      skip: page * pageSize,
+    }),
+    prisma.candidate.count({
+      where: { projectId: params.id },
+    }),
+  ]);
+
+  return NextResponse.json({
+    candidates,
+    total,
+    page,
+    pageSize,
+  });
 }
