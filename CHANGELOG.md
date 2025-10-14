@@ -20,6 +20,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Add triage rationale queue job for OpenAI batching with retry metrics.
 - Use stored locator snippets when available (fallback for Ask-AI quotes and prompts).
 - Provide Storybook coverage for locator summaries.
+- Queue-backed integrity feed ingestion job (Retraction Watch/DOAJ).
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.
