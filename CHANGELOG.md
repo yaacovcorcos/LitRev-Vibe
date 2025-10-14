@@ -6,6 +6,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Add triage AI scaffolding: cached rationale generation, Ask-AI endpoint, and triage card updates.
 - Introduce Evidence Ledger workspace skeleton with paginated API + inspector placeholder.
 - Add manual locator capture API + inspector form for ledger entries.
+- Surface locator verification status and pending warnings in the ledger workspace.
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.

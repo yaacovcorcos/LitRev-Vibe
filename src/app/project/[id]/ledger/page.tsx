@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useAddLocator, useLedgerEntries } from "@/hooks/use-ledger";
+import { useAddLocator, useLedgerEntries, type LedgerEntry } from "@/hooks/use-ledger";
 import { useProject } from "@/hooks/use-projects";
 import { cn } from "@/lib/utils";
 
@@ -226,6 +226,14 @@ export default function LedgerPage() {
                   const journal = metadata["journal"];
                   const publisher = metadata["publisher"];
                   const venue = typeof journal === "string" ? journal : typeof publisher === "string" ? publisher : undefined;
+                  const hasLocators = Array.isArray(entry.locators) && entry.locators.length > 0;
+
+                  const statusLabel = hasLocators && entry.verifiedByHuman ? "Verified" : hasLocators ? "Review" : "Pending locator";
+                  const statusClasses = cn("uppercase text-[11px]", {
+                    "border-amber-300 text-amber-700": hasLocators && !entry.verifiedByHuman,
+                    "border-destructive/40 text-destructive": !hasLocators,
+                  });
+                  const statusVariant = hasLocators && entry.verifiedByHuman ? "default" : "outline";
 
                   return (
                     <li key={entry.id}>
@@ -239,8 +247,8 @@ export default function LedgerPage() {
                       >
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-sm font-semibold text-foreground line-clamp-2">{title}</p>
-                          <Badge variant={entry.verifiedByHuman ? "default" : "outline"} className="uppercase text-[11px]">
-                            {entry.verifiedByHuman ? "Verified" : "Pending review"}
+                          <Badge variant={statusVariant} className={statusClasses}>
+                            {statusLabel}
                           </Badge>
                         </div>
                         {authors ? <p className="mt-2 text-xs text-muted-foreground line-clamp-1">{authors}</p> : null}
@@ -282,6 +290,7 @@ export default function LedgerPage() {
                   <p className="text-xs text-muted-foreground">
                     Citation key: <span className="font-mono text-foreground/90">{selectedEntry.citationKey}</span>
                   </p>
+                  <InspectorStatusBanner entry={selectedEntry} />
                 </div>
                 <InspectorSection title="Metadata">
                   <MetadataList metadata={selectedEntry.metadata} />
@@ -434,6 +443,41 @@ function InspectorSection({ title, children }: InspectorSectionProps) {
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
       <Separator />
       {children}
+    </div>
+  );
+}
+
+type InspectorStatusBannerProps = {
+  entry: LedgerEntry;
+};
+
+function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
+  const hasLocators = Array.isArray(entry.locators) && entry.locators.length > 0;
+
+  if (!hasLocators) {
+    return (
+      <div className="mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+        <p className="font-semibold uppercase tracking-wide">Pending locator</p>
+        <p className="text-destructive/80">
+          Add at least one locator before this reference can be used for compose or export workflows.
+        </p>
+      </div>
+    );
+  }
+
+  if (entry.verifiedByHuman) {
+    return (
+      <div className="mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground/80">
+        <p className="font-semibold uppercase tracking-wide text-primary">Locator verified</p>
+        <p className="text-primary-foreground/70">Ready for compose, export, and citation validation flows.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-1 rounded-md border border-amber-300/70 bg-amber-100/60 p-3 text-xs text-amber-700">
+      <p className="font-semibold uppercase tracking-wide">Locator captured</p>
+      <p>Double-check locator accuracy before marking this reference as verified.</p>
     </div>
   );
 }

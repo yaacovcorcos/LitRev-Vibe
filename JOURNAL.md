@@ -9,6 +9,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Delivered `/project/:id/ledger` workspace with entry list + inspector placeholder for metadata, locators, and provenance.
 - Documented new module in architecture/file index and surfaced milestone progress in changelog.
 - Added manual locator entry workflow with API endpoint + inspector form; basic validation wired for future verification.
+- Highlighted locator verification status in the workspace and warned users when entries lack coverage.
 
 ### 2025-10-14 — Triage AI Scaffolding
 - Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.
