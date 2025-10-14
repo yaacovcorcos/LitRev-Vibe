@@ -19,6 +19,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Separate locator "pending review" state with manual verification controls in ledger UI.
 - Add triage rationale queue job for OpenAI batching with retry metrics.
 - Use stored locator snippets when available (fallback for Ask-AI quotes and prompts).
+- Provide Storybook coverage for locator summaries.
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.

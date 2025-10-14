@@ -22,6 +22,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Added manual locator verification toggle (pending → review → verified) in ledger UI.
 - Created triage rationale batch job (OpenAI) with queue retries + metrics schema.
 - Updated Ask-AI prompts to prioritize stored locator snippets (PDF fallback) before abstract quotes.
+- Captured locator summary Storybook coverage for responsive QA.
 
 ### 2025-10-14 — Triage AI Scaffolding
 - Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.
