@@ -22,6 +22,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Added snippet extraction API/button to refresh PDF quotes from triage.
 - Provide Storybook coverage for locator summaries.
 - Queue-backed integrity feed ingestion job (Retraction Watch/DOAJ).
+- Scheduled nightly integrity ingestion via worker cron hook with tests.
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.
