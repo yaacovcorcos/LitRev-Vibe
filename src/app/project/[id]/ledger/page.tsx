@@ -714,6 +714,8 @@ function LocatorField({ id, label, placeholder, value, onChange, disabled }: Loc
   );
 }
 
+export { LocatorSummary };
+
 type VerifyButtonProps = {
   entryId: string;
   page: number;
