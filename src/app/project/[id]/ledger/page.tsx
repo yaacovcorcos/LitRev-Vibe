@@ -15,13 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAddLocator, useLedgerEntries, useVerifyLocator, type LedgerEntry } from "@/hooks/use-ledger";
 import { useProject } from "@/hooks/use-projects";
-import {
-  determineLocatorStatus,
-  getLocatorStatusDisplay,
-  type LocatorStatus,
-  type LocatorStatusTone,
-} from "@/lib/ledger/status";
+import { determineLocatorStatus, getLocatorStatusDisplay, type LocatorStatus } from "@/lib/ledger/status";
 import { cn } from "@/lib/utils";
+import { LocatorBanner } from "@/components/ledger/locator-banner";
 
 const pageSize = 20;
 
@@ -540,9 +536,14 @@ function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
   const display = getLocatorStatusDisplay(status);
 
   return (
-    <LocatorBanner display={display}>
-      {status === "locator_pending_review" ? <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} /> : null}
-    </LocatorBanner>
+    <LocatorBanner
+      display={display}
+      actionSlot={
+        status === "locator_pending_review" ? (
+          <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} />
+        ) : null
+      }
+    />
   );
 }
 
@@ -732,9 +733,12 @@ function VerifyButton({ entryId, page, pageSize }: VerifyButtonProps) {
   );
 }
 
+const BADGE_CLASSES: Record<LocatorStatusTone, string> = {
+  danger: "border-destructive/40 text-destructive",
+  warning: "border-amber-300 text-amber-700",
+  success: "border-primary/40 text-primary",
+};
+
 function getLocatorBadgeClasses(tone: LocatorStatusTone) {
-  return cn("uppercase text-[11px]", {
-    "border-amber-300 text-amber-700": tone === "warning",
-    "border-destructive/40 text-destructive": tone === "danger",
-  });
+  return cn("uppercase text-[11px]", BADGE_CLASSES[tone]);
 }

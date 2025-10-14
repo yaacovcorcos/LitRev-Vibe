@@ -37,5 +37,7 @@ describe("getLocatorStatusDisplay", () => {
       badgeVariant: "default",
       tone: "success",
     });
+
+    // Fallback to pending locator when an unknown status is provided
   });
 });
