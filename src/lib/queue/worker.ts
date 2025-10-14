@@ -3,6 +3,8 @@ import pino from 'pino';
 
 import { processSearchJob, searchJobSchema } from "@/lib/search/jobs";
 import { processTriageRationaleJob } from "@/lib/ai/jobs";
+import { processIntegrityIngestionJob } from "@/lib/integrity/jobs";
+import { processSnippetExtractionJob } from "@/lib/snippets/jobs";
 import { queues } from "./queue";
 import { createRedisConnection } from "./redis";
 
@@ -23,6 +25,10 @@ export const defaultWorker = new Worker(
         return processSearchJob(searchJobSchema.parse(job.data));
       case 'triage:rationale':
         return processTriageRationaleJob(job.data);
+      case 'integrity:ingest':
+        return processIntegrityIngestionJob();
+      case 'snippets:extract':
+        return processSnippetExtractionJob(job.data);
       default:
         logger.warn({ jobName: job.name }, 'Unhandled job type, echoing payload');
         return job.data;

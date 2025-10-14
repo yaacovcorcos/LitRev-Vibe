@@ -1,11 +1,11 @@
 import "dotenv/config";
 
-import { ingestIntegrityFeeds } from "@/lib/integrity/feeds";
+import { enqueueIntegrityIngestionJob } from "@/lib/integrity/jobs";
 
 async function main() {
   try {
-    await ingestIntegrityFeeds();
-    console.log("Integrity feed ingestion complete.");
+    const job = await enqueueIntegrityIngestionJob();
+    console.log(`Integrity ingestion job queued (id=${job.id}). Ensure the queue worker is running to process it.`);
   } catch (error) {
     console.error("Integrity feed ingestion failed:", error);
     process.exitCode = 1;

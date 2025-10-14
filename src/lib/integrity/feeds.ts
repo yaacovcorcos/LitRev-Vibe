@@ -52,7 +52,7 @@ async function loadDoajRecords(): Promise<DoajRecord[]> {
   return data ?? [];
 }
 
-export async function applyIntegrityFlags(updates: CandidateIntegrityUpdate[]) {
+export async function applyIntegrityFlags(updates: CandidateIntegrityUpdate[], onUpdate?: () => void) {
   if (updates.length === 0) {
     return;
   }
@@ -64,12 +64,18 @@ export async function applyIntegrityFlags(updates: CandidateIntegrityUpdate[]) {
         data: {
           integrityFlags: (update.flags as unknown) as Prisma.JsonValue,
         },
+      }).then(() => {
+        onUpdate?.();
       }),
     ),
   );
 }
 
-export async function ingestIntegrityFeeds() {
+type IngestOptions = {
+  onCandidateUpdate?: () => void;
+};
+
+export async function ingestIntegrityFeeds(options: IngestOptions = {}) {
   const [retractions, doaj] = await Promise.all([loadRetractionRecords(), loadDoajRecords()]);
 
   if (retractions.length === 0 && doaj.length === 0) {
@@ -158,6 +164,6 @@ export async function ingestIntegrityFeeds() {
     return;
   }
 
-  await applyIntegrityFlags(updates);
+  await applyIntegrityFlags(updates, options.onCandidateUpdate);
   console.info(`Integrity feeds ingested: updated ${updates.length} candidates.`);
 }
