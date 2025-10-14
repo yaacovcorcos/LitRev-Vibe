@@ -1,16 +1,31 @@
 import type { JobsOptions } from "bullmq";
 
+import { z } from "zod";
+
 import { queues } from "@/lib/queue/queue";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma";
 import { fetchUnpaywallBatch } from "@/lib/unpaywall";
 import { searchAdapters, type SearchAdapter, type SearchQuery, type SearchResponse } from "@/lib/search";
 
-export type SearchJobData = {
-  projectId: string;
-  query: SearchQuery;
-  adapters?: string[];
-};
+function sanitizeJson<T>(value: T): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
+}
+
+const searchJobSchema = z.object({
+  projectId: z.string(),
+  query: z.object({
+    terms: z.string(),
+    page: z.number().int().min(0).optional(),
+    pageSize: z.number().int().min(1).optional(),
+    since: z.string().optional(),
+    until: z.string().optional(),
+  }),
+  adapters: z.array(z.string()).optional(),
+});
+
+export type SearchJobData = z.infer<typeof searchJobSchema>;
+export { searchJobSchema };
 
 export type SearchJobResult = {
   inserted: number;
@@ -33,7 +48,9 @@ export async function enqueueSearchJob(data: SearchJobData, options?: JobsOption
 }
 
 async function persistResults(projectId: string, adapterId: string, response: SearchResponse) {
-  let stored = 0;
+  if (response.results.length === 0) {
+    return 0;
+  }
 
   const dois = response.results
     .map((result) => (result.metadata?.doi as string | undefined) ?? undefined)
@@ -41,27 +58,25 @@ async function persistResults(projectId: string, adapterId: string, response: Se
 
   const unpaywallRecords = dois.length > 0 ? await fetchUnpaywallBatch(dois) : {};
 
-  for (const result of response.results) {
+  const payloads = response.results.map((result) => {
     const doi = (result.metadata?.doi as string | undefined) ?? undefined;
     const oaRecord = doi ? unpaywallRecords[doi] ?? null : null;
 
-    await prisma.candidate.create({
-      data: {
-        projectId,
-        searchAdapter: adapterId,
-        externalIds: {
-          adapter: adapterId,
-          externalId: result.externalId,
-          doi,
-        } satisfies Prisma.InputJsonValue,
-        metadata: result as Prisma.InputJsonValue,
-        oaLinks: oaRecord ? (oaRecord as Prisma.InputJsonValue) : Prisma.JsonNull,
-      },
-    });
-    stored += 1;
-  }
+    return {
+      projectId,
+      searchAdapter: adapterId,
+      externalIds: sanitizeJson({
+        adapter: adapterId,
+        externalId: result.externalId,
+        doi,
+      }),
+      metadata: sanitizeJson(result),
+      oaLinks: sanitizeJson(oaRecord),
+    };
+  });
 
-  return stored;
+  const { count } = await prisma.candidate.createMany({ data: payloads });
+  return count;
 }
 
 export async function processSearchJob(data: SearchJobData): Promise<SearchJobResult> {

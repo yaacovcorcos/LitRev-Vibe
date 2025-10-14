@@ -55,17 +55,18 @@ export async function fetchUnpaywallRecord(doi: string): Promise<UnpaywallRecord
 
 export async function fetchUnpaywallBatch(dois: string[]): Promise<Record<string, UnpaywallRecord | null>> {
   const uniqueDois = Array.from(new Set(dois.filter(Boolean)));
-  const entries: [string, UnpaywallRecord | null][] = [];
 
-  for (const doi of uniqueDois) {
-    try {
-      const record = await fetchUnpaywallRecord(doi);
-      entries.push([doi, record]);
-    } catch (error) {
-      console.error("Failed to fetch Unpaywall record", doi, error);
-      entries.push([doi, null]);
-    }
-  }
+  const entries = await Promise.all(
+    uniqueDois.map(async (doi) => {
+      try {
+        const record = await fetchUnpaywallRecord(doi);
+        return [doi, record] as const;
+      } catch (error) {
+        console.error("Failed to fetch Unpaywall record", doi, error);
+        return [doi, null] as const;
+      }
+    }),
+  );
 
   return Object.fromEntries(entries);
 }

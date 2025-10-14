@@ -1,7 +1,7 @@
 import { QueueEvents, Worker, JobsOptions } from 'bullmq';
 import pino from 'pino';
 
-import { processSearchJob, type SearchJobData } from "@/lib/search/jobs";
+import { processSearchJob, searchJobSchema } from "@/lib/search/jobs";
 import { queues } from "./queue";
 import { createRedisConnection } from "./redis";
 
@@ -19,7 +19,7 @@ export const defaultWorker = new Worker(
 
     switch (job.name) {
       case 'search:execute':
-        return processSearchJob(job.data as SearchJobData);
+        return processSearchJob(searchJobSchema.parse(job.data));
       default:
         logger.warn({ jobName: job.name }, 'Unhandled job type, echoing payload');
         return job.data;

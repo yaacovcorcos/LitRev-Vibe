@@ -2,17 +2,44 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { SearchResult } from "@/lib/search";
 import type { Candidate } from "@/hooks/use-candidates";
+import type { SearchResult } from "@/lib/search";
 import { cn } from "@/lib/utils";
 
-function asSearchResult(metadata: Record<string, unknown> | undefined): SearchResult | null {
-  if (!metadata) return null;
-  try {
-    return metadata as SearchResult;
-  } catch {
-    return null;
+type OALinksRecord = {
+  bestOALink?: unknown;
+  oaStatus?: unknown;
+};
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isSearchResult(value: unknown): value is SearchResult {
+  if (!value || typeof value !== "object") {
+    return false;
   }
+
+  const record = value as Record<string, unknown>;
+  if (record.externalId && !isString(record.externalId)) {
+    return false;
+  }
+  if (record.title && !isString(record.title)) {
+    return false;
+  }
+  if (record.authors && !isStringArray(record.authors)) {
+    return false;
+  }
+
+  return true;
+}
+
+function isOALinksRecord(value: unknown): value is OALinksRecord {
+  return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
 type CandidateCardProps = {
@@ -21,10 +48,11 @@ type CandidateCardProps = {
 };
 
 export function CandidateCard({ candidate, className }: CandidateCardProps) {
-  const result = asSearchResult(candidate.metadata);
+  const result = isSearchResult(candidate.metadata) ? candidate.metadata : null;
   const authors = result?.authors?.join(", ");
-  const oaLink = (candidate.oaLinks as Record<string, unknown> | undefined)?.bestOALink as string | undefined;
-  const oaStatus = (candidate.oaLinks as Record<string, unknown> | undefined)?.oaStatus as string | undefined;
+  const oaLinksRecord = isOALinksRecord(candidate.oaLinks) ? candidate.oaLinks as OALinksRecord : undefined;
+  const oaLink = oaLinksRecord && isString(oaLinksRecord.bestOALink) ? oaLinksRecord.bestOALink as string : undefined;
+  const oaStatus = oaLinksRecord && isString(oaLinksRecord.oaStatus) ? oaLinksRecord.oaStatus as string : undefined;
 
   return (
     <Card className={cn("border-muted-foreground/20 shadow-sm", className)}>

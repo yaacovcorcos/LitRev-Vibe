@@ -146,7 +146,7 @@ export class PubMedAdapter implements SearchAdapter {
     return {
       results,
       meta: {
-        total: Number(searchJson.esearchresult?.count ?? results.length),
+        total: Number(searchJson.esearchresult?.count ?? 0),
         tookMs: Date.now() - start,
         page: query.page ?? 0,
         pageSize: query.pageSize ?? DEFAULT_PAGE_SIZE,
