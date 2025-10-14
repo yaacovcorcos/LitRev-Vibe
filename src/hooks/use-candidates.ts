@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { SearchQuery } from "@/lib/search";
 
-const candidateKeys = {
+export const candidateKeys = {
   base: 'candidates' as const,
   all: (projectId: string) => ['candidates', projectId] as const,
   list: (projectId: string, page: number, pageSize: number) => ['candidates', projectId, page, pageSize] as const,
