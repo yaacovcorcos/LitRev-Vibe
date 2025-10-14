@@ -182,7 +182,7 @@ Indexes added for quick lookup by `project_id`, `type+status`, and `citation_key
 - Manual locator entry UI; enforce locator requirement before ledger move.
 - Integrity feeds ingestion (Retraction Watch snapshot, DOAJ import) with nightly worker.
 - Evidence Ledger page & inspector with locator verification states.
-- Conduct cross-device usability review (desktop, tablet) for Triage and Ledger; document adjustments in JOURNAL.md.
+- Conduct cross-device usability review (desktop, tablet) for Triage and Ledger; document adjustments in JOURNAL.md. *(Completed 2025-10-15 — see `docs/reviews/2025-10-15-triage-ledger-cross-device.md`.)*
 
 ### Milestone 4 (Weeks 7-8) — Draft & Compose
 - Implement citation validator + ledger-only enforcement.

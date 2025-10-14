@@ -18,8 +18,9 @@ Quick reference for navigating the repository. Update this index whenever new to
 ## Docs
 - `docs/specs/` — Product specification, homepage description, routing decisions.
 - `docs/planning/` — Implementation plans (`v1`, `v2`), roadmap details.
+- `docs/development/` — Testing strategy, workflows (skeleton).
+- `docs/reviews/` — QA artifacts and responsive reviews (e.g., `2025-10-15-triage-ledger-cross-device.md`).
 - (future) `docs/api/` — tRPC routes, adapter contracts.
-- (future) `docs/development/` — testing strategy, workflows.
 
 ## Source (`src/`)
 - `app/` — Next.js App Router entry points (`layout.tsx`, `page.tsx`, global styles).

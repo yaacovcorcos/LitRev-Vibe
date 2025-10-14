@@ -4,6 +4,11 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-15 — Cross-Device Triage & Ledger Review
+- Ran responsive pass for Search & Triage plus Evidence Ledger across 390–1440px viewports; logged findings in `docs/reviews/2025-10-15-triage-ledger-cross-device.md`.
+- Tweaked triage search form padding (`p-4 sm:p-6`) so mobile widths retain comfortable spacing without crowding controls.
+- Confirmed LocatorBanner component keeps inspector messaging legible on tablet and phone breakpoints; no additional layout changes required.
+
 ### 2025-10-15 — Locator Workflow Hardening
 - Added unit tests for ledger locator POST route covering validation, append behaviour, and verification reset to pending review.
 - Added unit tests for ledger verification route ensuring payload validation and status updates.

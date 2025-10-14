@@ -95,7 +95,10 @@ export default function TriagePage() {
       <Separator />
 
       <section>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6 shadow-sm">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 shadow-sm sm:p-6"
+        >
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Search className="h-4 w-4" />
             Search strategy
