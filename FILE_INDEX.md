@@ -24,14 +24,16 @@ Quick reference for navigating the repository. Update this index whenever new to
 ## Source (`src/`)
 - `app/` — Next.js App Router entry points (`layout.tsx`, `page.tsx`, global styles).
 - `components/layout/` — Workspace shell primitives (sidebar, header, command menu, app shell).
+- `components/planning/` — Planning workspace components (section cards, editors).
+- `components/activity/` — Activity & undo timeline components.
 - `components/providers/` — Cross-cutting providers (React Query, etc.).
-- `components/ui/` — shadcn/ui generated primitives (e.g., `button.tsx`).
+- `components/ui/` — shadcn/ui generated primitives (buttons, cards, textarea, etc.).
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
 - `lib/navigation.ts` — Navigation metadata powering the shell.
 - `lib/prisma.ts` — Prisma client singleton usable across API routes and server actions.
 - `lib/utils.ts` — Shared utility helpers (`cn()`).
-- `hooks/` — React Query hooks (e.g., projects CRUD).
+- `hooks/` — React Query hooks (projects CRUD, activity log, etc.).
 - `scripts/` — Runtime scripts (`run-worker.ts`).
 - `stories/` — Storybook stories (design tokens, examples).
 - `styles/` — Storybook-specific styles (`storybook.css`).

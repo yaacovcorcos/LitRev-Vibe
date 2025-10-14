@@ -18,4 +18,8 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Added Prisma-backed REST routes for `/api/projects` (list/create/update/delete).
 - Introduced React Query provider and hooks (`useProjects`, `useCreateProject`, etc.) for client-side data access.
 - Updated documentation (Architecture, File Index) to capture new modules.
+### 2025-10-13 — Activity Log Scaffolding
+- Added API endpoints and hooks for activity logging (`/api/projects/:id/activity`).
+- Implemented timeline component and Activity page at `/project/:id/activity`.
+- Updated design docs with navigation and module references.
 
