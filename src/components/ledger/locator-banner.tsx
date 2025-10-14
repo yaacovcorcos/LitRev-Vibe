@@ -6,12 +6,13 @@ import { cn } from "@/lib/utils";
 
 type LocatorBannerProps = {
   display: LocatorStatusDisplay;
-  tone: LocatorStatusTone;
+  tone?: LocatorStatusTone;
+  className?: string;
+  actionSlot?: ReactNode;
+  children?: ReactNode;
   showVerify?: boolean;
   onVerify?: () => void;
   verifyLabel?: string;
-  className?: string;
-  actionSlot?: ReactNode;
 };
 
 const INSPECTOR_CLASS_MAP: Record<LocatorStatusTone, { container: string; title: string; body: string }> = {
@@ -35,20 +36,23 @@ const INSPECTOR_CLASS_MAP: Record<LocatorStatusTone, { container: string; title:
 export function LocatorBanner({
   display,
   tone,
+  className,
+  actionSlot,
+  children,
   showVerify,
   onVerify,
   verifyLabel = "Mark as verified",
-  className,
-  actionSlot,
 }: LocatorBannerProps) {
-  const styles = INSPECTOR_CLASS_MAP[tone];
+  const resolvedTone = tone ?? display.tone;
+  const styles = INSPECTOR_CLASS_MAP[resolvedTone];
+  const slotContent = actionSlot ?? children;
 
   return (
     <div className={cn("mt-3", styles.container, className)}>
       <p className={styles.title}>{display.inspectorTitle}</p>
       <p className={styles.body}>{display.inspectorBody}</p>
-      {actionSlot}
-      {!actionSlot && showVerify ? (
+      {slotContent}
+      {!slotContent && showVerify ? (
         <Button type="button" size="sm" variant="outline" onClick={onVerify} className="text-xs">
           {verifyLabel}
         </Button>

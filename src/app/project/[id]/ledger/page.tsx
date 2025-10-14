@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { BookOpen, Loader2 } from "lucide-react";
 
+import { LocatorBanner } from "@/components/ledger/locator-banner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -537,7 +538,6 @@ function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
   return (
     <LocatorBanner
       display={display}
-      tone={display.tone}
       actionSlot={
         status === "locator_pending_review" ? (
           <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} />
@@ -733,12 +733,12 @@ function VerifyButton({ entryId, page, pageSize }: VerifyButtonProps) {
   );
 }
 
-const BADGE_CLASSES = {
+const BADGE_CLASSES: Record<LocatorStatusTone, string> = {
   danger: "border-destructive/40 text-destructive",
   warning: "border-amber-300 text-amber-700",
   success: "border-primary/40 text-primary",
-} as const;
+};
 
-function getLocatorBadgeClasses(tone: keyof typeof BADGE_CLASSES) {
+function getLocatorBadgeClasses(tone: LocatorStatusTone) {
   return cn("uppercase text-[11px]", BADGE_CLASSES[tone]);
 }

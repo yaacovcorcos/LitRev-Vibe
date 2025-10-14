@@ -182,7 +182,7 @@ Indexes added for quick lookup by `project_id`, `type+status`, and `citation_key
 - Manual locator entry UI; enforce locator requirement before ledger move.
 - Integrity feeds ingestion (Retraction Watch snapshot, DOAJ import) with nightly worker.
 - Evidence Ledger page & inspector with locator verification states.
-- Conduct cross-device usability review (desktop, tablet) for Triage and Ledger; document adjustments in JOURNAL.md.
+- Conduct cross-device usability review (desktop, tablet) for Triage and Ledger; document adjustments in JOURNAL.md. *(Completed 2025-10-15 — see `docs/reviews/2025-10-15-triage-ledger-cross-device.md`.)*
 
 ### Milestone 4 (Weeks 7-8) — Draft & Compose
 - Implement citation validator + ledger-only enforcement.
@@ -284,11 +284,11 @@ AI agents should use this backlog as the execution queue. Each task includes acc
 - [x] Implement OpenAI-based triage rationale + batching with retry strategy (AC: job metrics capture success/fail counts; retry config documented).  
 - [x] Deliver Ask-AI panel using PDF snippets and manual locator fallback (AC: keep-to-ledger blocked until locator present; UI prompts verified).  
 - [x] Ingest Retraction Watch + DOAJ feeds nightly; surface signals in UI (AC: integrity flags shown on triage cards; monitoring alerts on ingestion failure).  
-- [ ] Finalize manual locator entry UX with validation states (`pending_locator`, `locator_verified`) (AC: unit tests cover transitions; ledger inspector reflects state).  
-- [ ] Publish Ledger page + inspector with responsive layout, design sign-off, and stories.
+- [x] Finalize manual locator entry UX with validation states (`pending_locator`, `locator_verified`) (AC: unit tests cover transitions; ledger inspector reflects state).  
+- [x] Publish Ledger page + inspector with responsive layout, design sign-off, and stories.
 
 ### Milestone 4 — Draft & Compose
-- [ ] Build citation validator enforcing ledger-only citations and verified locators (AC: failing validation blocks compose job; unit tests for edge cases).  
+- [x] Build citation validator enforcing ledger-only citations and verified locators (AC: failing validation blocks compose job; unit tests for edge cases). *(Implemented in `src/lib/compose/citation-validator.ts` with coverage in `src/lib/compose/citation-validator.test.ts`; validator throws via `assertCitationsValid`, ready for compose worker integration.)*  
 - [ ] Implement literature review compose worker with progress streaming to Runs page (AC: Playwright test for compose flow; job resumable mid-section).  
 - [ ] Integrate Draft editor (Tiptap/Lexical) with section approvals, rollback timeline, and inspector tie-ins (AC: version history persists; accessibility check passes).  
 - [ ] Add AI suggestion workflow for human-first sections with diff preview (AC: suggestions stored separately; acceptance toggles update content).  

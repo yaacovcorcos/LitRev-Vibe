@@ -4,6 +4,22 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-15 — Cross-Device Triage & Ledger Review
+- Ran responsive pass for Search & Triage plus Evidence Ledger across 390–1440px viewports; logged findings in `docs/reviews/2025-10-15-triage-ledger-cross-device.md`.
+- Tweaked triage search form padding (`p-4 sm:p-6`) so mobile widths retain comfortable spacing without crowding controls.
+- Confirmed LocatorBanner component keeps inspector messaging legible on tablet and phone breakpoints; no additional layout changes required.
+
+### 2025-10-15 — Citation Validator Sign-off
+- Audited `src/lib/compose/citation-validator.ts` to confirm ledger-only enforcement and verified locator checks.
+- Documented milestone acceptance in `docs/planning/litrev-mvp-implementation-plan-v2.md` and pointed to Vitest coverage (`citation-validator.test.ts`).
+- Ready to wire `assertCitationsValid` into the compose worker pipeline once the job scaffold lands.
+
+### 2025-10-15 — Locator Workflow Hardening
+- Added unit tests for ledger locator POST route covering validation, append behaviour, and verification reset to pending review.
+- Added unit tests for ledger verification route ensuring payload validation and status updates.
+- Confirmed vitest suite passes and marked Milestone 3 backlog item for manual locator UX as complete.
+- Extracted locator status banner UI into shared component and wired Storybook scenarios for ledger page + inspector to support design sign-off.
+
 ### 2025-10-14 — Evidence Ledger Skeleton
 - Implemented paginated ledger API route and React Query hook.
 - Delivered `/project/:id/ledger` workspace with entry list + inspector placeholder for metadata, locators, and provenance.
