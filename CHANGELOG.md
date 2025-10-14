@@ -14,6 +14,7 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Add locator status helper with UI badges plus unit tests.
 - Implement compose citation validator ensuring only verified ledger references are cited.
 - Connect triage rationale & Ask-AI endpoints to OpenAI (fallbacks retained offline).
+- Augment Ask-AI fallback with abstract-based quotes for environments without PDF snippets.
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.

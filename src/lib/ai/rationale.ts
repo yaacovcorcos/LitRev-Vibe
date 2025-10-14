@@ -132,10 +132,45 @@ function fallbackRationale(candidate: GenerateContext["candidate"]): TriageRatio
   } satisfies TriageRationale;
 }
 
+function extractAbstractQuotes(context: AskAiContext | GenerateContext, limit = 2): AskAiResponse["quotes"] {
+  const metadata = context.candidate.metadata ?? {};
+  const abstract = typeof metadata.abstract === "string" ? metadata.abstract : "";
+  if (!abstract.trim()) {
+    return [];
+  }
+
+  const sentences = abstract.match(/[^.!?]+[.!?]/g) ?? [abstract];
+  const keywords = "question" in context
+    ? context.question
+        .toLowerCase()
+        .split(/[^a-z0-9]+/i)
+        .filter((keyword) => keyword.length > 3)
+    : [];
+
+  const scored = sentences
+    .map((sentence) => {
+      const lower = sentence.toLowerCase();
+      const score = keywords.reduce((total, keyword) => (lower.includes(keyword) ? total + 1 : total), 0);
+      return {
+        sentence: sentence.trim(),
+        score,
+      };
+    })
+    .sort((a, b) => b.score - a.score || a.sentence.length - b.sentence.length);
+
+  return scored
+    .slice(0, limit)
+    .map((entry) => ({
+      text: entry.sentence,
+      source: "Abstract",
+    }));
+}
+
 function fallbackAskResponse(context: AskAiContext, title: string): AskAiResponse {
+  const quotes = extractAbstractQuotes(context, 2);
   return {
     answer: `Unable to contact OpenAI in this environment. When asked "${context.question}", the assistant would summarize "${title}" with supporting quotes once connectivity is available.`,
-    quotes: [],
+    quotes,
   } satisfies AskAiResponse;
 }
 
@@ -209,6 +244,7 @@ export async function askCandidateQuestion(context: AskAiContext): Promise<AskAi
   }
 
   const candidateContext = buildCandidateContext(context.candidate);
+  const fallbackQuotes = extractAbstractQuotes(context, 2);
 
   try {
     const completion = await client.chat.completions.create({
@@ -247,10 +283,24 @@ export async function askCandidateQuestion(context: AskAiContext): Promise<AskAi
 
     const parsed = parseJSON<Record<string, unknown>>(content);
     if (isAskAiResponse(parsed)) {
+      if (parsed.quotes.length === 0 && fallbackQuotes.length > 0) {
+        return {
+          ...parsed,
+          quotes: fallbackQuotes,
+        } satisfies AskAiResponse;
+      }
       return parsed;
     }
   } catch (error) {
     console.error("Failed to ask OpenAI about candidate", error);
+  }
+
+  if (fallbackQuotes.length > 0) {
+    const fallback = fallbackAskResponse(context, title);
+    return {
+      ...fallback,
+      quotes: fallbackQuotes,
+    } satisfies AskAiResponse;
   }
 
   return fallbackAskResponse(context, title);
