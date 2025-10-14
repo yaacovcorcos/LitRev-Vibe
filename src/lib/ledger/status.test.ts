@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { determineLocatorStatus } from "./status";
+import { determineLocatorStatus, getLocatorStatusDisplay } from "./status";
 
 describe("determineLocatorStatus", () => {
   it("returns pending when no locators present", () => {
@@ -15,5 +15,27 @@ describe("determineLocatorStatus", () => {
 
   it("returns verified when locators exist and entry verified", () => {
     expect(determineLocatorStatus({ locators: [{}], verifiedByHuman: true })).toBe("locator_verified");
+  });
+});
+
+describe("getLocatorStatusDisplay", () => {
+  it("returns display metadata for each status", () => {
+    expect(getLocatorStatusDisplay("pending_locator")).toMatchObject({
+      label: "Pending locator",
+      badgeVariant: "outline",
+      tone: "danger",
+    });
+
+    expect(getLocatorStatusDisplay("locator_pending_review")).toMatchObject({
+      label: "Review",
+      badgeVariant: "outline",
+      tone: "warning",
+    });
+
+    expect(getLocatorStatusDisplay("locator_verified")).toMatchObject({
+      label: "Verified",
+      badgeVariant: "default",
+      tone: "success",
+    });
   });
 });

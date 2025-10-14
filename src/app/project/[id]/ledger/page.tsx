@@ -14,7 +14,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAddLocator, useLedgerEntries, useVerifyLocator, type LedgerEntry } from "@/hooks/use-ledger";
 import { useProject } from "@/hooks/use-projects";
-import { determineLocatorStatus, type LocatorStatus } from "@/lib/ledger/status";
+import {
+  determineLocatorStatus,
+  getLocatorStatusDisplay,
+  type LocatorStatus,
+  type LocatorStatusTone,
+} from "@/lib/ledger/status";
 import { cn } from "@/lib/utils";
 
 const pageSize = 20;
@@ -247,9 +252,8 @@ export default function LedgerPage() {
                     verifiedByHuman: entry.verifiedByHuman,
                   });
 
-                  const statusLabel = getLocatorStatusLabel(locatorStatus);
-                  const statusVariant = getLocatorStatusVariant(locatorStatus);
-                  const statusClasses = getLocatorStatusClasses(locatorStatus);
+                  const display = getLocatorStatusDisplay(locatorStatus);
+                  const statusClasses = getLocatorBadgeClasses(display.tone);
 
                   return (
                     <li key={entry.id}>
@@ -263,8 +267,8 @@ export default function LedgerPage() {
                       >
                         <div className="flex items-center justify-between gap-4">
                           <p className="text-sm font-semibold text-foreground line-clamp-2">{title}</p>
-                          <Badge variant={statusVariant} className={statusClasses}>
-                            {statusLabel}
+                          <Badge variant={display.badgeVariant} className={statusClasses}>
+                            {display.label}
                           </Badge>
                         </div>
                         {authors ? <p className="mt-2 text-xs text-muted-foreground line-clamp-1">{authors}</p> : null}
@@ -532,32 +536,14 @@ type InspectorStatusBannerProps = {
 
 function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
   const status = determineLocatorStatus({ locators: entry.locators, verifiedByHuman: entry.verifiedByHuman });
-
-  if (status === "pending_locator") {
-    return (
-      <div className="mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-        <p className="font-semibold uppercase tracking-wide">Pending locator</p>
-        <p className="text-destructive/80">
-          Add at least one locator before this reference can be used for compose or export workflows.
-        </p>
-      </div>
-    );
-  }
-
-  if (status === "locator_verified") {
-    return (
-      <div className="mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground/80">
-        <p className="font-semibold uppercase tracking-wide text-primary">Locator verified</p>
-        <p className="text-primary-foreground/70">Ready for compose, export, and citation validation flows.</p>
-      </div>
-    );
-  }
+  const display = getLocatorStatusDisplay(status);
+  const containerClasses = getInspectorBannerClasses(display.tone);
 
   return (
-    <div className="mt-3 space-y-2 rounded-md border border-amber-300/70 bg-amber-100/60 p-3 text-xs text-amber-700">
-      <p className="font-semibold uppercase tracking-wide">Locator captured</p>
-      <p>Double-check locator accuracy before marking this reference as verified.</p>
-      <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} />
+    <div className={containerClasses.container}>
+      <p className={containerClasses.title}>{display.inspectorTitle}</p>
+      <p className={containerClasses.body}>{display.inspectorBody}</p>
+      {status === "locator_pending_review" ? <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} /> : null}
     </div>
   );
 }
@@ -748,25 +734,33 @@ function VerifyButton({ entryId, page, pageSize }: VerifyButtonProps) {
   );
 }
 
-function getLocatorStatusLabel(status: LocatorStatus) {
-  switch (status) {
-    case "locator_verified":
-      return "Verified";
-    case "locator_pending_review":
-      return "Review";
-    case "pending_locator":
-    default:
-      return "Pending locator";
-  }
-}
-
-function getLocatorStatusVariant(status: LocatorStatus) {
-  return status === "locator_verified" ? "default" : "outline";
-}
-
-function getLocatorStatusClasses(status: LocatorStatus) {
+function getLocatorBadgeClasses(tone: LocatorStatusTone) {
   return cn("uppercase text-[11px]", {
-    "border-amber-300 text-amber-700": status === "locator_pending_review",
-    "border-destructive/40 text-destructive": status === "pending_locator",
+    "border-amber-300 text-amber-700": tone === "warning",
+    "border-destructive/40 text-destructive": tone === "danger",
   });
+}
+
+function getInspectorBannerClasses(tone: LocatorStatusTone) {
+  switch (tone) {
+    case "warning":
+      return {
+        container: "mt-3 space-y-2 rounded-md border border-amber-300/70 bg-amber-100/60 p-3 text-xs text-amber-700",
+        title: "font-semibold uppercase tracking-wide",
+        body: "text-amber-700",
+      };
+    case "success":
+      return {
+        container: "mt-3 space-y-1 rounded-md border border-primary/40 bg-primary/10 p-3 text-xs text-primary-foreground/80",
+        title: "font-semibold uppercase tracking-wide text-primary",
+        body: "text-primary-foreground/70",
+      };
+    case "danger":
+    default:
+      return {
+        container: "mt-3 space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive",
+        title: "font-semibold uppercase tracking-wide",
+        body: "text-destructive/80",
+      };
+  }
 }

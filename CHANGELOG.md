@@ -20,6 +20,8 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 - Add triage rationale queue job for OpenAI batching with retry metrics.
 - Use stored locator snippets when available (fallback for Ask-AI quotes and prompts).
 - Added snippet extraction API/button to refresh PDF quotes from triage.
+- Highlighted integrity flags on triage cards with severity messaging.
+- Finalized locator status display helpers and added tests for pending/review/verified states.
 - Provide Storybook coverage for locator summaries.
 - Queue-backed integrity feed ingestion job (Retraction Watch/DOAJ).
 - Scheduled nightly integrity ingestion via worker cron hook with tests.
