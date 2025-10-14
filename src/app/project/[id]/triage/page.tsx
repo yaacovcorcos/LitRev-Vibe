@@ -152,7 +152,9 @@ export default function TriagePage() {
         ) : candidateData && candidateData.candidates.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2">
             {candidateData.candidates.map((candidate) => (
-              <CandidateCard key={candidate.id} candidate={candidate} />
+              projectId ? (
+                <CandidateCard key={candidate.id} projectId={projectId} candidate={candidate} />
+              ) : null
             ))}
           </div>
         ) : (

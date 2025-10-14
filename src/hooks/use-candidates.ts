@@ -16,6 +16,7 @@ export type Candidate = {
   metadata: Record<string, unknown>;
   oaLinks?: Record<string, unknown> | null;
   integrityFlags?: Record<string, unknown> | null;
+  aiRationale?: Record<string, unknown> | null;
   triageStatus: string;
   createdAt: string;
 };
