@@ -15,7 +15,7 @@ export type DraftSectionRecord = {
     citationKey: string;
     verifiedByHuman: boolean;
   }>;
-  versionHistory?: Array<{
+  versionHistory: Array<{
     id: string;
     version: number;
     status: string;
