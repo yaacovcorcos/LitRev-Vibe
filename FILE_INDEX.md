@@ -35,6 +35,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-keep-candidate.ts` — Mutation helper for enforcing locator requirement before keeping to ledger.
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
 - `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
+- `hooks/use-compose.ts` — Helpers for enqueuing compose jobs and polling job status.
 - `lib/integrity/` — Integrity feed ingestion stubs, queue jobs, scheduler helpers.
 - `lib/ledger/` — Locator status helpers and related utilities.
 - `lib/compose/` — Compose workflow helpers (citation validator, job contracts, worker processor, resumable state utilities).

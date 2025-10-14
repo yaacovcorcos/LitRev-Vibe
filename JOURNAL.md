@@ -4,6 +4,11 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-16 — Compose API & Hooks
+- Added `/api/projects/:id/compose` endpoint to enqueue literature review jobs with validation and project guardrails, plus `/api/projects/:id/jobs/:jobId` for polling status.
+- Created React Query hooks for enqueuing compose jobs and polling job records, laying groundwork for the Draft workspace integration.
+- Covered new routes with Vitest (mocked Prisma/job modules) to ensure enqueue + status flows behave as expected.
+
 ### 2025-10-16 — Compose Worker Implementation
 - Implemented `processComposeJob` to validate ledger citations, persist draft sections, and update job progress with resumable state snapshots.
 - Added activity logging per generated section and deterministic draft content fallback that references ledger metadata.

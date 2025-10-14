@@ -113,3 +113,9 @@ export async function updateJobRecord({
 function serializeToJson(value: unknown) {
   return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
 }
+
+export async function getJobById(jobId: string) {
+  return prisma.job.findUnique({
+    where: { id: jobId },
+  });
+}
