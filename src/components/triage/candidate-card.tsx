@@ -26,6 +26,7 @@ type IntegrityFlagRecord = {
   label?: unknown;
   severity?: unknown;
   source?: unknown;
+  reason?: unknown;
 };
 
 function isString(value: unknown): value is string {
@@ -63,6 +64,7 @@ type ParsedIntegrityFlag = {
   label: string;
   severity: "critical" | "warning" | "info";
   source: string;
+  reason?: string;
 };
 
 function parseIntegrityFlags(value: unknown): ParsedIntegrityFlag[] {
@@ -80,6 +82,7 @@ function parseIntegrityFlags(value: unknown): ParsedIntegrityFlag[] {
       const label = typeof flag.label === "string" ? flag.label : null;
       const severityRaw = typeof flag.severity === "string" ? flag.severity : null;
       const source = typeof flag.source === "string" ? flag.source : "unknown";
+      const reason = typeof flag.reason === "string" ? flag.reason : undefined;
 
       if (!label || !severityRaw) {
         return null;
@@ -91,6 +94,7 @@ function parseIntegrityFlags(value: unknown): ParsedIntegrityFlag[] {
         label,
         severity,
         source,
+        reason,
       } satisfies ParsedIntegrityFlag;
     })
     .filter((flag): flag is ParsedIntegrityFlag => flag !== null);
@@ -270,6 +274,7 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
               key={`${flag.source}-${flag.label}-${index}`}
               variant={flag.severity === "critical" ? "destructive" : flag.severity === "warning" ? "outline" : "secondary"}
               className="text-xs"
+              title={[flag.label, flag.source ? `Source: ${flag.source}` : null, flag.reason].filter(Boolean).join(" • ")}
             >
               {flag.label}
             </Badge>
@@ -370,6 +375,11 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
                 {snippetMutation.isPending ? "Enqueuing…" : "Refresh snippets"}
               </Button>
             </div>
+            {integrityFlags.length > 0 ? (
+              <p className="text-[11px] uppercase tracking-wide text-destructive">
+                Integrity flags present — review before keeping.
+              </p>
+            ) : null}
             {askResponse ? (
               <div className="space-y-3 rounded-md bg-muted/40 p-3 text-sm text-foreground/90">
                 <p>{askResponse.answer}</p>
