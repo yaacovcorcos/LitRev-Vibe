@@ -26,7 +26,8 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Added triage "Refresh snippets" action to enqueue PDF snippet extraction per candidate.
 - Added queue job + cron hook stub for nightly integrity feed ingestion.
 - Wired worker scheduler to enqueue nightly integrity ingestion and added tests.
-- Surfaced integrity flags on triage cards with severity message + tooltip for quick review.
+- Surfaced integrity flags on triage cards with severity messaging + tooltip for quick review.
+- Finalized locator status display helpers and ensured tests cover pending → review → verified transitions.
 
 ### 2025-10-14 — Triage AI Scaffolding
 - Added cached triage rationale endpoint with Prisma persistence and rate-limited stub generator.
