@@ -35,6 +35,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
 - `lib/integrity/` — Integrity feed ingestion stubs and helpers.
 - `lib/ledger/` — Locator status helpers and related utilities.
+- `lib/compose/` — Compose workflow helpers (citation validator, etc.).
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
 - `lib/ai/` — AI orchestration helpers (triage rationale + Ask-AI stubs with rate limiting).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
