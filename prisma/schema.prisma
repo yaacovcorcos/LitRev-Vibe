@@ -96,6 +96,7 @@ model DraftSection {
 
   project   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   citations DraftSectionOnLedger[]
+  suggestions DraftSuggestion[]
 }
 
 model DraftSectionOnLedger {
@@ -108,6 +109,27 @@ model DraftSectionOnLedger {
   ledgerEntry  LedgerEntry  @relation(fields: [ledgerEntryId], references: [id], onDelete: Cascade)
 
   @@id([draftSectionId, ledgerEntryId])
+}
+
+model DraftSuggestion {
+  id             String   @id @default(cuid())
+  projectId      String
+  draftSectionId String
+  suggestionType String   @default("improvement")
+  summary        String?
+  diff           Json
+  content        Json?
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  resolvedAt     DateTime?
+  resolvedBy     String?
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  section DraftSection @relation(fields: [draftSectionId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([draftSectionId])
 }
 
 model Job {

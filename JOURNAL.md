@@ -9,6 +9,7 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Created React Query hooks for enqueuing compose jobs and polling job records, laying groundwork for the Draft workspace integration.
 - Covered new routes with Vitest (mocked Prisma/job modules) to ensure enqueue + status flows behave as expected.
 - Introduced Draft workspace page with section list, compose trigger wired to ledger prerequisites, and read-only Tiptap viewer for generated content.
+- Added suggestion workflow scaffolding: Prisma model, generation stubs, API endpoints, and UI controls for requesting/accepting AI draft improvements.
 
 ### 2025-10-16 — Compose Worker Implementation
 - Implemented `processComposeJob` to validate ledger citations, persist draft sections, and update job progress with resumable state snapshots.
