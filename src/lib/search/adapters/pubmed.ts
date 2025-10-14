@@ -83,7 +83,8 @@ function mapSummaryToResults(summary: any): SearchResult[] {
       externalId: id,
       source: "pubmed",
       title: doc.title ?? "",
-      abstract: doc.elocationid ?? undefined,
+      // PubMed esummary does not reliably include abstracts; fetch via efetch in the future
+      abstract: undefined,
       authors,
       journal: doc.fulljournalname ?? doc.source ?? undefined,
       publishedAt: doc.pubdate ?? undefined,
