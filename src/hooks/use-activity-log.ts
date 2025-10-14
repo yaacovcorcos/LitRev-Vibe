@@ -1,17 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { ActivityEntry } from "@/lib/activity-log";
+
 const activityKeys = {
   all: (projectId: string) => ["activity", projectId] as const,
-};
-
-type ActivityEntry = {
-  id: string;
-  projectId: string;
-  actor: string;
-  action: string;
-  payload: unknown;
-  createdAt: string;
-  undoRef: string | null;
 };
 
 async function fetchActivity(projectId: string) {
@@ -33,7 +25,7 @@ type LogActivityInput = {
 };
 
 export function useActivityLog(projectId: string | null) {
-  const key = activityKeys.all(projectId ?? 'unknown');
+  const key = activityKeys.all(projectId ?? "unknown");
   return useQuery({
     queryKey: key,
     queryFn: () => fetchActivity(projectId as string),
