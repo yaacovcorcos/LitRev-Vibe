@@ -22,4 +22,8 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Added API endpoints and hooks for activity logging (`/api/projects/:id/activity`).
 - Implemented timeline component and Activity page at `/project/:id/activity`.
 - Updated design docs with navigation and module references.
+### 2025-10-13 — Search Stack Shell
+- Added search API (`/api/projects/:id/search`) with background job enqueueing.
+- Implemented candidates React Query hooks and triage workspace UI skeleton.
+- Integrated Unpaywall enrichment and persisted results as candidates.
 

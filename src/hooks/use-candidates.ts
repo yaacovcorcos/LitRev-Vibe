@@ -6,13 +6,14 @@ const candidateKeys = {
   all: (projectId: string) => ["candidates", projectId] as const,
 };
 
-type Candidate = {
+export type Candidate = {
   id: string;
   projectId: string;
   searchAdapter: string;
   externalIds: Record<string, unknown>;
   metadata: Record<string, unknown>;
   oaLinks?: Record<string, unknown> | null;
+  integrityFlags?: Record<string, unknown> | null;
   triageStatus: string;
   createdAt: string;
 };
@@ -58,7 +59,7 @@ export function useCandidates(projectId: string | null) {
   });
 }
 
-export function useSearchProjects() {
+export function useEnqueueSearch() {
   const queryClient = useQueryClient();
 
   return useMutation({

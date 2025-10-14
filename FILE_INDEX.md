@@ -26,6 +26,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `components/layout/` — Workspace shell primitives (sidebar, header, command menu, app shell).
 - `components/planning/` — Planning workspace components (section cards, editors).
 - `components/activity/` — Activity & undo timeline components.
+- `components/triage/` — Triage candidate cards and listing UI.
 - `components/providers/` — Cross-cutting providers (React Query, etc.).
 - `components/ui/` — shadcn/ui generated primitives (buttons, cards, textarea, etc.).
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
