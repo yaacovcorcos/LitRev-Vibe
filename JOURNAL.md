@@ -9,6 +9,11 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Tweaked triage search form padding (`p-4 sm:p-6`) so mobile widths retain comfortable spacing without crowding controls.
 - Confirmed LocatorBanner component keeps inspector messaging legible on tablet and phone breakpoints; no additional layout changes required.
 
+### 2025-10-15 — Citation Validator Sign-off
+- Audited `src/lib/compose/citation-validator.ts` to confirm ledger-only enforcement and verified locator checks.
+- Documented milestone acceptance in `docs/planning/litrev-mvp-implementation-plan-v2.md` and pointed to Vitest coverage (`citation-validator.test.ts`).
+- Ready to wire `assertCitationsValid` into the compose worker pipeline once the job scaffold lands.
+
 ### 2025-10-15 — Locator Workflow Hardening
 - Added unit tests for ledger locator POST route covering validation, append behaviour, and verification reset to pending review.
 - Added unit tests for ledger verification route ensuring payload validation and status updates.

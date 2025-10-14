@@ -288,7 +288,7 @@ AI agents should use this backlog as the execution queue. Each task includes acc
 - [x] Publish Ledger page + inspector with responsive layout, design sign-off, and stories.
 
 ### Milestone 4 — Draft & Compose
-- [ ] Build citation validator enforcing ledger-only citations and verified locators (AC: failing validation blocks compose job; unit tests for edge cases).  
+- [x] Build citation validator enforcing ledger-only citations and verified locators (AC: failing validation blocks compose job; unit tests for edge cases). *(Implemented in `src/lib/compose/citation-validator.ts` with coverage in `src/lib/compose/citation-validator.test.ts`; validator throws via `assertCitationsValid`, ready for compose worker integration.)*  
 - [ ] Implement literature review compose worker with progress streaming to Runs page (AC: Playwright test for compose flow; job resumable mid-section).  
 - [ ] Integrate Draft editor (Tiptap/Lexical) with section approvals, rollback timeline, and inspector tie-ins (AC: version history persists; accessibility check passes).  
 - [ ] Add AI suggestion workflow for human-first sections with diff preview (AC: suggestions stored separately; acceptance toggles update content).  
