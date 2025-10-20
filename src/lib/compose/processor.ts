@@ -221,7 +221,7 @@ function setSectionState(section: ComposeJobState["sections"][number], status: C
   }
 }
 
-function ensureSectionState(state: ComposeJobState, sectionInput: ComposeJobQueuePayload["sections"][number], index: number) {
+export function ensureSectionState(state: ComposeJobState, sectionInput: ComposeJobQueuePayload["sections"][number], index: number) {
   if (!state.sections[index]) {
     state.sections[index] = {
       key: sectionInput.sectionId ?? fallbackSectionKey(sectionInput.sectionType, index),
@@ -239,7 +239,7 @@ function ensureSectionState(state: ComposeJobState, sectionInput: ComposeJobQueu
   return state.sections[index];
 }
 
-function mergeStateWithPayload(persisted: ComposeJobState, payload: ComposeJobQueuePayload) {
+export function mergeStateWithPayload(persisted: ComposeJobState, payload: ComposeJobQueuePayload) {
   const hydrated = cloneState(persisted);
 
   payload.sections.forEach((section, index) => {
@@ -260,7 +260,7 @@ function mergeStateWithPayload(persisted: ComposeJobState, payload: ComposeJobQu
   return hydrated;
 }
 
-function completedRatio(state: ComposeJobState, totalSections: number) {
+export function completedRatio(state: ComposeJobState, totalSections: number) {
   if (totalSections === 0) {
     return 1;
   }
@@ -268,7 +268,7 @@ function completedRatio(state: ComposeJobState, totalSections: number) {
   return Math.min(1, count / totalSections);
 }
 
-function calculateProgress(state: ComposeJobState, totalSections: number) {
+export function calculateProgress(state: ComposeJobState, totalSections: number) {
   if (totalSections === 0) {
     return 1;
   }
