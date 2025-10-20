@@ -51,7 +51,7 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
     await updateJobRecord({
       jobId,
       status: "in_progress",
-      progress: completedRatio(state, totalSections),
+      progress: calculateProgress(state, totalSections),
       resumableState: state,
     });
 
@@ -71,7 +71,7 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
       await updateJobRecord({
         jobId,
         status: "in_progress",
-        progress: completedRatio(state, totalSections),
+        progress: calculateProgress(state, totalSections),
         resumableState: state,
       });
 
@@ -161,18 +161,19 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
         },
       });
 
-      const isFinalSection = completedRatio(state, totalSections) === 1;
+      const progress = calculateProgress(state, totalSections);
+      const isFinalSection = progress === 1;
 
       await updateJobRecord({
         jobId,
         status: isFinalSection ? "completed" : "in_progress",
-        progress: completedRatio(state, totalSections),
+        progress,
         resumableState: state,
         ...(isFinalSection ? { completedAt: new Date() } : {}),
       });
     }
 
-    const finalRatio = completedRatio(state, totalSections);
+    const finalRatio = calculateProgress(state, totalSections);
     if (finalRatio === 1) {
       await updateJobRecord({
         jobId,
@@ -265,6 +266,16 @@ function completedRatio(state: ComposeJobState, totalSections: number) {
   }
   const count = state.sections.filter((section) => section.status === "completed").length;
   return Math.min(1, count / totalSections);
+}
+
+function calculateProgress(state: ComposeJobState, totalSections: number) {
+  if (totalSections === 0) {
+    return 1;
+  }
+
+  const completed = state.sections.filter((section) => section.status === "completed").length;
+  const running = state.sections.some((section) => section.status === "running") ? 0.4 : 0;
+  return Math.min(1, (completed + running) / totalSections);
 }
 
 function fallbackSectionKey(sectionType: string, index: number) {
