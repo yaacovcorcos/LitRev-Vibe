@@ -2,10 +2,17 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { toInputJson } from "@/lib/prisma/json";
+import {
+  normalizeProjectSettings,
+  projectSettingsPatchSchema,
+  resolveProjectSettings,
+} from "@/lib/projects/settings";
 
 const projectInputSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
+  settings: projectSettingsPatchSchema.optional(),
 });
 
 type RouteParams = {
@@ -13,6 +20,21 @@ type RouteParams = {
     id: string;
   };
 };
+
+function serializeProject(project: {
+  id: string;
+  name: string;
+  description: string | null;
+  settings: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    ...project,
+    description: project.description ?? null,
+    settings: normalizeProjectSettings(project.settings),
+  };
+}
 
 export async function GET(_request: Request, { params }: RouteParams) {
   const project = await prisma.project.findUnique({
@@ -23,7 +45,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(project);
+  return NextResponse.json(serializeProject(project));
 }
 
 export async function PUT(request: Request, { params }: RouteParams) {
@@ -37,16 +59,30 @@ export async function PUT(request: Request, { params }: RouteParams) {
     );
   }
 
+  const existing = await prisma.project.findUnique({
+    where: { id: params.id },
+  });
+
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const baseSettings = normalizeProjectSettings(existing.settings);
+  const mergedSettings = parsed.data.settings
+    ? resolveProjectSettings(parsed.data.settings, baseSettings)
+    : baseSettings;
+
   try {
     const project = await prisma.project.update({
       where: { id: params.id },
       data: {
         name: parsed.data.name,
         description: parsed.data.description ?? null,
+        settings: toInputJson(mergedSettings),
       },
     });
 
-    return NextResponse.json(project);
+    return NextResponse.json(serializeProject(project));
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Not found" }, { status: 404 });
