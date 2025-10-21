@@ -3,7 +3,7 @@ import pino from 'pino';
 
 import { COMPOSE_QUEUE_JOB_NAME } from "@/lib/compose/jobs";
 import { processComposeJob } from "@/lib/compose/processor";
-import { processSearchJob, searchJobSchema } from "@/lib/search/jobs";
+import { processSearchJob } from "@/lib/search/jobs";
 import { processTriageRationaleJob } from "@/lib/ai/jobs";
 import { processIntegrityIngestionJob } from "@/lib/integrity/jobs";
 import { processSnippetExtractionJob } from "@/lib/snippets/jobs";
@@ -24,7 +24,7 @@ export const defaultWorker = new Worker(
 
     switch (job.name) {
       case 'search:execute':
-        return processSearchJob(searchJobSchema.parse(job.data));
+        return processSearchJob(job.data);
       case 'triage:rationale':
         return processTriageRationaleJob(job.data);
       case 'integrity:ingest':

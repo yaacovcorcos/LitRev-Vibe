@@ -38,6 +38,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-keep-candidate.ts` — Mutation helper for enforcing locator requirement before keeping to ledger.
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
 - `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
+- `hooks/use-discard-candidate.ts` — Mutation helper for tagging candidates as discarded during triage.
 - `hooks/use-compose.ts` — Helpers for enqueuing compose jobs and polling job status.
 - `hooks/use-draft-sections.ts` — Fetch draft sections for the compose workspace and expose the `useUpdateDraftSection` mutation for saves/approvals.
 - `hooks/use-draft-suggestions.ts` — Manage AI suggestions (list, request, resolve) for draft sections.
@@ -52,8 +53,10 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `lib/ai/` — AI orchestration helpers (OpenAI client, triage rationale jobs, Ask-AI).
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
 - `lib/navigation.ts` — Navigation metadata powering the shell.
+- `lib/metrics/prisma-flow.ts` — Aggregates PRISMA-style flow metrics (search totals, triage counts, ledger inclusions).
 - `lib/prisma.ts` — Prisma client singleton usable across API routes and server actions.
 - `lib/utils.ts` — Shared utility helpers (`cn()`).
+- `lib/triage/status.ts` — Triage status enums and helpers for sanitizing state transitions.
 - `hooks/` — React Query hooks (projects CRUD, activity log, etc.).
 - `scripts/` — Runtime scripts (`run-worker.ts`).
 - `stories/` — Storybook stories (design tokens, examples).

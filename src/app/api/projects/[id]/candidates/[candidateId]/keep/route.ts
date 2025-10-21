@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { toInputJson, toNullableInputJson } from "@/lib/prisma/json";
 import { logActivity } from "@/lib/activity-log";
+import { sanitizeTriageStatus } from "@/lib/triage/status";
 
 const locatorSchema = z
   .object({
@@ -78,6 +79,8 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const citationKey = deriveCitationKey({ id: candidate.id, metadata: candidate.metadata as Record<string, unknown> });
 
+  const previousStatus = sanitizeTriageStatus(candidate.triageStatus);
+
   const ledgerEntry = await prisma.ledgerEntry.create({
     data: {
       projectId: candidate.projectId,
@@ -110,6 +113,17 @@ export async function POST(request: Request, { params }: RouteParams) {
     payload: {
       candidateId: candidate.id,
       ledgerEntryId: ledgerEntry.id,
+      locator: parsed.data.locator,
+    },
+  });
+
+  await logActivity({
+    projectId: candidate.projectId,
+    action: "triage.kept",
+    actor: "system",
+    payload: {
+      candidateId: candidate.id,
+      previousStatus,
       locator: parsed.data.locator,
     },
   });
