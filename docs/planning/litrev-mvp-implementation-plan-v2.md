@@ -290,9 +290,9 @@ AI agents should use this backlog as the execution queue. Each task includes acc
 ### Milestone 4 — Draft & Compose
 - [x] Build citation validator enforcing ledger-only citations and verified locators (AC: failing validation blocks compose job; unit tests for edge cases). *(Implemented in `src/lib/compose/citation-validator.ts` with coverage in `src/lib/compose/citation-validator.test.ts`; validator throws via `assertCitationsValid`, ready for compose worker integration.)*  
 - [x] Implement literature review compose worker with progress streaming to Runs page (AC: Playwright test for compose flow; job resumable mid-section).  
-- [ ] Integrate Draft editor (Tiptap/Lexical) with section approvals, rollback timeline, and inspector tie-ins (AC: version history persists; accessibility check passes).  
+- [x] Integrate Draft editor (Tiptap/Lexical) with section approvals, rollback timeline, and inspector tie-ins (AC: version history persists; accessibility check passes).  
 - [x] Add AI suggestion workflow for human-first sections with diff preview (AC: suggestions stored separately; acceptance toggles update content).  
-- [ ] Document draft UX patterns in design library + JOURNAL entry.
+- [x] Document draft UX patterns in design library + JOURNAL entry.
 
 ### Milestone 5 — Exports & PRISMA
 - [ ] Implement DOCX adapter using `docx` + `citeproc-js` with APA/Vancouver templates (AC: golden-file tests compare outputs).  

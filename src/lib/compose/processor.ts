@@ -18,6 +18,8 @@ export type ComposeJobResult = {
   totalSections: number;
 };
 
+const RUNNING_SECTION_PROGRESS_WEIGHT = 0.5;
+
 type LedgerEntryForCompose = {
   id: string;
   citationKey: string;
@@ -285,7 +287,7 @@ export function calculateProgress(state: ComposeJobState, totalSections: number)
     { completed: 0, running: 0 },
   );
 
-  const baseProgress = (completed + running * 0.5) / totalSections;
+  const baseProgress = (completed + running * RUNNING_SECTION_PROGRESS_WEIGHT) / totalSections;
   return Math.min(1, baseProgress);
 }
 

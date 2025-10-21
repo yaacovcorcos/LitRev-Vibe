@@ -8,7 +8,8 @@ export function createRedisConnection(): Redis {
     return client;
   }
 
-  const isMock = process.env.MOCK_REDIS === '1' || (!process.env.REDIS_URL && process.env.NODE_ENV !== 'production');
+  const url = process.env.REDIS_URL;
+  const isMock = process.env.MOCK_REDIS === '1' || (!url && process.env.NODE_ENV !== 'production');
 
   if (isMock) {
     process.env.MOCK_REDIS = process.env.MOCK_REDIS ?? '1';
@@ -25,8 +26,6 @@ export function createRedisConnection(): Redis {
     client = new MockRedis() as unknown as Redis;
     return client;
   }
-
-  const url = process.env.REDIS_URL;
 
   if (!url) {
     throw new Error('REDIS_URL is not set. Please configure Redis before running the queue worker.');

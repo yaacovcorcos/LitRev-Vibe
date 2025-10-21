@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type DraftSectionRecord = {
   id: string;
@@ -44,5 +44,40 @@ export function useDraftSections(projectId: string | null) {
     enabled: Boolean(projectId),
     staleTime: 5_000,
     refetchInterval: 15_000,
+  });
+}
+
+type UpdateDraftSectionInput = {
+  projectId: string;
+  sectionId: string;
+  content?: Record<string, unknown>;
+  status?: "draft" | "approved";
+};
+
+async function updateDraftSection({ projectId, sectionId, ...payload }: UpdateDraftSectionInput) {
+  const response = await fetch(`/api/projects/${projectId}/draft/${sectionId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update draft section");
+  }
+
+  return response.json() as Promise<DraftSectionRecord>;
+}
+
+export function useUpdateDraftSection() {
+  const queryClient = useQueryClient();
+
+  return useMutation<DraftSectionRecord, Error, UpdateDraftSectionInput>({
+    mutationFn: updateDraftSection,
+    onSuccess: (_section, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["draft", variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: ["draft", "versions", variables.projectId, variables.sectionId] });
+    },
   });
 }

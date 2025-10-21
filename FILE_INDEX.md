@@ -20,6 +20,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `docs/planning/` — Implementation plans (`v1`, `v2`), roadmap details.
 - `docs/development/` — Testing strategy, workflows (skeleton).
 - `docs/reviews/` — QA artifacts and responsive reviews (e.g., `2025-10-15-triage-ledger-cross-device.md`).
+- `docs/design/draft-workspace.md` — Draft workspace interaction patterns (editing, approvals, inspector).
 - (future) `docs/api/` — tRPC routes, adapter contracts.
 
 ## Source (`src/`)
@@ -38,7 +39,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
 - `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
 - `hooks/use-compose.ts` — Helpers for enqueuing compose jobs and polling job status.
-- `hooks/use-draft-sections.ts` — Fetch draft sections for the compose workspace.
+- `hooks/use-draft-sections.ts` — Fetch draft sections for the compose workspace and expose the `useUpdateDraftSection` mutation for saves/approvals.
 - `hooks/use-draft-suggestions.ts` — Manage AI suggestions (list, request, resolve) for draft sections.
 - `hooks/use-draft-versions.ts` — Fetch version history and trigger rollbacks for draft sections.
 - `hooks/use-jobs.ts` — Fetch automation job runs with polling.
