@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { BookText, Clock3, Loader2, PenSquare, RotateCcw, Send } from "lucide-react";
+import { BookText, Check, Clock3, Loader2, PenSquare, RotateCcw, Send, Undo2 } from "lucide-react";
 
 import { DraftEditor } from "@/components/draft/draft-editor";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDraftSections } from "@/hooks/use-draft-sections";
+import { useDraftSections, useUpdateDraftSection } from "@/hooks/use-draft-sections";
 import { useDraftSuggestions, useRequestDraftSuggestion, useResolveDraftSuggestion } from "@/hooks/use-draft-suggestions";
 import { useLedgerEntries } from "@/hooks/use-ledger";
 import { useEnqueueComposeJob, useJobStatus } from "@/hooks/use-compose";
@@ -44,10 +44,13 @@ export default function DraftPage() {
   const requestSuggestion = useRequestDraftSuggestion();
   const resolveSuggestion = useResolveDraftSuggestion();
   const composeMutation = useEnqueueComposeJob();
+  const updateSection = useUpdateDraftSection();
 
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [lastJobStatus, setLastJobStatus] = useState<string | null>(null);
+  const [pendingContent, setPendingContent] = useState<Record<string, unknown> | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
   const jobStatus = useJobStatus(projectId, currentJobId);
 
@@ -63,6 +66,27 @@ export default function DraftPage() {
       setActiveSectionId(sections[0].id);
     }
   }, [activeSectionId, sections]);
+
+  useEffect(() => {
+    if (!activeSection) {
+      setPendingContent(null);
+      return;
+    }
+
+    setPendingContent(activeSection.content);
+    setFeedbackMessage(null);
+  }, [activeSection?.id]);
+
+  const isApproved = activeSection?.status === "approved";
+  const isUpdating = updateSection.isPending;
+
+  const isDirty = useMemo(() => {
+    if (!activeSection || !pendingContent) {
+      return false;
+    }
+
+    return JSON.stringify(pendingContent) !== JSON.stringify(activeSection.content ?? {});
+  }, [activeSection, pendingContent]);
 
   const verifiedLedgerIds = useMemo(() => {
     if (!ledgerData?.entries) {
@@ -103,7 +127,7 @@ export default function DraftPage() {
   };
 
   const handleRequestSuggestion = () => {
-    if (!projectId || !activeSection) {
+    if (!projectId || !activeSection || isApproved) {
       return;
     }
 
@@ -126,6 +150,73 @@ export default function DraftPage() {
     });
   };
 
+  const handleSaveDraft = () => {
+    if (!projectId || !activeSection || !pendingContent || updateSection.isPending) {
+      return;
+    }
+
+    setFeedbackMessage(null);
+    updateSection.mutate(
+      {
+        projectId,
+        sectionId: activeSection.id,
+        content: pendingContent,
+      },
+      {
+        onSuccess: () => {
+          setFeedbackMessage("Draft saved");
+          refetch();
+          suggestionsQuery.refetch();
+          versionsQuery.refetch();
+        },
+      },
+    );
+  };
+
+  const handleApproveDraft = () => {
+    if (!projectId || !activeSection || updateSection.isPending) {
+      return;
+    }
+
+    setFeedbackMessage(null);
+    updateSection.mutate(
+      {
+        projectId,
+        sectionId: activeSection.id,
+        status: "approved",
+      },
+      {
+        onSuccess: () => {
+          setFeedbackMessage("Draft marked as approved");
+          refetch();
+          versionsQuery.refetch();
+        },
+      },
+    );
+  };
+
+  const handleReopenDraft = () => {
+    if (!projectId || !activeSection || updateSection.isPending) {
+      return;
+    }
+
+    setFeedbackMessage(null);
+    updateSection.mutate(
+      {
+        projectId,
+        sectionId: activeSection.id,
+        status: "draft",
+      },
+      {
+        onSuccess: () => {
+          setFeedbackMessage("Draft reopened for edits");
+          refetch();
+          versionsQuery.refetch();
+        },
+      },
+    );
+  };
+
   const handleRollback = (version: number | null) => {
     if (!projectId || !activeSection || !version) {
       return;
@@ -139,7 +230,9 @@ export default function DraftPage() {
       },
       {
         onSuccess: () => {
+          setFeedbackMessage("Draft restored to previous version");
           refetch();
+          versionsQuery.refetch();
         },
       },
     );
@@ -182,7 +275,7 @@ export default function DraftPage() {
               Draft & Compose
             </h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Generate and review literature review drafts powered by verified ledger entries. Approvals and detailed editing workflows are coming soon.
+              Generate, edit, and approve literature review drafts powered by verified ledger entries. Use the controls below to save changes, track versions, and mark sections as publication-ready.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -197,20 +290,22 @@ export default function DraftPage() {
                 <span className="flex items-center gap-2"><PenSquare className="h-4 w-4" /> Compose literature review</span>
               )}
             </Button>
-            <Button
-              variant="outline"
-              disabled={isRollbackDisabled || !activeSection}
-              onClick={() => handleRollback(versionsQuery.data?.versions?.[0]?.version ?? null)}
-            >
-              {rollbackMutation.isPending ? (
-                <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Rolling back…</span>
-              ) : (
-                <span className="flex items-center gap-2"><RotateCcw className="h-4 w-4" /> Rollback version</span>
-              )}
+            <Button asChild variant="outline">
+              <Link href={`/project/${projectId ?? ""}/ledger`}>Open ledger</Link>
             </Button>
           </div>
         </div>
       </header>
+
+      {feedbackMessage ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+        >
+          {feedbackMessage}
+        </div>
+      ) : null}
 
       <Separator />
 
@@ -265,24 +360,89 @@ export default function DraftPage() {
         <article className="space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm">
           {activeSection ? (
             <div className="space-y-4">
-              <header className="space-y-2">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-xl font-semibold text-foreground">
-                    {getSectionLabel(activeSection.sectionType)}
-                  </h2>
-                  <Badge variant="outline">Version {activeSection.version}</Badge>
-                  <Badge variant={activeSection.status === "approved" ? "default" : "secondary"}>
-                    {activeSection.status}
-                  </Badge>
+              <header className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-xl font-semibold text-foreground">
+                        {getSectionLabel(activeSection.sectionType)}
+                      </h2>
+                      <Badge variant="outline">Version {activeSection.version}</Badge>
+                      <Badge variant={isApproved ? "default" : "secondary"}>{activeSection.status}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Updated {new Date(activeSection.updatedAt).toLocaleString()}
+                    </p>
+                    {activeSection.approvedAt ? (
+                      <p className="text-xs text-muted-foreground">
+                        Approved {new Date(activeSection.approvedAt).toLocaleString()}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2" aria-label="Draft actions">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSaveDraft}
+                      disabled={!isDirty || isUpdating || isApproved}
+                    >
+                      {isUpdating && !isApproved ? (
+                        <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving…</span>
+                      ) : (
+                        <span className="flex items-center gap-2"><PenSquare className="h-4 w-4" /> Save draft</span>
+                      )}
+                    </Button>
+                    {isApproved ? (
+                      <Button type="button" variant="outline" disabled={isUpdating} onClick={handleReopenDraft}>
+                        <span className="flex items-center gap-2"><Undo2 className="h-4 w-4" /> Reopen draft</span>
+                      </Button>
+                    ) : (
+                      <Button type="button" disabled={isUpdating || isDirty} onClick={handleApproveDraft}>
+                        {isUpdating && !isDirty ? (
+                          <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Updating…</span>
+                        ) : (
+                          <span className="flex items-center gap-2"><Check className="h-4 w-4" /> Mark as approved</span>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Updated {new Date(activeSection.updatedAt).toLocaleString()}
-                </p>
+                {isUpdating ? (
+                  <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
+                    Saving changes to this section…
+                  </p>
+                ) : null}
               </header>
 
-              <DraftEditor content={activeSection.content} editable={false} />
+              <DraftEditor
+                content={pendingContent ?? activeSection.content}
+                editable={!isApproved}
+                onUpdate={(doc) => setPendingContent(doc)}
+              />
 
-              <footer className="space-y-2">
+              <section className="space-y-2 rounded-lg border border-muted-foreground/40 p-4" aria-label="Section details">
+                <h3 className="text-sm font-semibold text-muted-foreground">Section details</h3>
+                <dl className="grid gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <dt className="font-medium text-foreground">Status</dt>
+                    <dd className="capitalize">{activeSection.status}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <dt className="font-medium text-foreground">Approved</dt>
+                    <dd>{activeSection.approvedAt ? new Date(activeSection.approvedAt).toLocaleString() : "Not yet"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <dt className="font-medium text-foreground">Versions tracked</dt>
+                    <dd>{versionsQuery.data?.versions.length ?? 0}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <dt className="font-medium text-foreground">Linked evidence</dt>
+                    <dd>{activeSection.ledgerEntries.length}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground">Linked ledger entries</h3>
                 {activeSection.ledgerEntries.length > 0 ? (
                   <ul className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -297,11 +457,23 @@ export default function DraftPage() {
                     No ledger citations linked yet.
                   </p>
                 )}
-              </footer>
+              </section>
 
               <section className="space-y-3 rounded-lg border border-muted-foreground/40 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-sm font-semibold text-muted-foreground">Version history</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isRollbackDisabled || !activeSection}
+                    onClick={() => handleRollback(versionsQuery.data?.versions?.[0]?.version ?? null)}
+                  >
+                    {rollbackMutation.isPending ? (
+                      <span className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Rolling back…</span>
+                    ) : (
+                      <span className="flex items-center gap-2"><RotateCcw className="h-3 w-3" /> Restore latest prior version</span>
+                    )}
+                  </Button>
                 </div>
                 {versionsQuery.isLoading ? (
                   <div className="space-y-2">
