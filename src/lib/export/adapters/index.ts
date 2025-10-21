@@ -30,6 +30,20 @@ const adapters: Partial<Record<ExportFormat, ExportAdapter>> = {
       lines.push(`- Sources screened: ${context.metrics.screened}`);
       lines.push(`- Sources included: ${context.metrics.included}`);
 
+      for (const section of context.draftSections) {
+        const heading = resolveSectionHeading(section.sectionType);
+        const paragraphs = extractParagraphs(section.content);
+        if (paragraphs.length === 0) {
+          continue;
+        }
+        lines.push("");
+        lines.push(`## ${heading}`);
+        for (const paragraph of paragraphs) {
+          lines.push("");
+          lines.push(paragraph);
+        }
+      }
+
       if (options.includeLedger && context.ledgerEntries.length > 0) {
         lines.push("");
         lines.push("## Evidence Ledger");
@@ -85,6 +99,86 @@ const adapters: Partial<Record<ExportFormat, ExportAdapter>> = {
       };
     },
   },
+  docx: {
+    format: "docx",
+    generate: async (context, options) => {
+      const docxModule: any = await import("docx");
+      const { Document, HeadingLevel, Packer, Paragraph, TextRun } = docxModule;
+
+      const introParagraphs: any[] = [
+        new Paragraph({ text: context.project.name, heading: HeadingLevel.TITLE }),
+        ...(context.project.description ? [new Paragraph(context.project.description)] : []),
+        new Paragraph({ text: `Generated on ${context.generatedAt.toISOString()}`, spacing: { after: 200 } }),
+        new Paragraph({ text: "Summary", heading: HeadingLevel.HEADING_1 }),
+        new Paragraph(`Ledger entries: ${context.ledgerEntries.length}`),
+        new Paragraph(`Draft sections: ${context.draftSections.length}`),
+        new Paragraph(`Sources screened: ${context.metrics.screened}`),
+        new Paragraph(`Sources included: ${context.metrics.included}`),
+      ];
+
+      const sectionParagraphs = context.draftSections.flatMap((section) => {
+        const paragraphs = extractParagraphs(section.content);
+        if (paragraphs.length === 0) {
+          return [];
+        }
+        const headingParagraph = new Paragraph({
+          text: resolveSectionHeading(section.sectionType),
+          heading: HeadingLevel.HEADING_1,
+        });
+
+        const contentParagraphs = paragraphs.map((text) => new Paragraph(text));
+        return [headingParagraph, ...contentParagraphs];
+      });
+
+      const ledgerParagraphs = options.includeLedger && context.ledgerEntries.length > 0
+        ? [
+            new Paragraph({ text: "Evidence Ledger", heading: HeadingLevel.HEADING_1 }),
+            ...context.ledgerEntries.map((entry) => {
+              const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
+              const title = typeof metadata.title === "string" ? metadata.title : entry.citationKey;
+              const journal = typeof metadata.journal === "string" ? metadata.journal : null;
+              const year = typeof metadata.publishedAt === "string" ? metadata.publishedAt : null;
+              const summary = [journal, year].filter(Boolean).join(", ");
+
+              const runs = [
+                new TextRun({ text: `${entry.citationKey}: `, bold: true }),
+                new TextRun(title),
+              ];
+              if (summary) {
+                runs.push(new TextRun({ text: ` (${summary})` }));
+              }
+
+              return new Paragraph({ children: runs });
+            }),
+          ]
+        : [];
+
+      const prismaParagraphs = options.includePrismaDiagram
+        ? [
+            new Paragraph({ text: "PRISMA Snapshot", heading: HeadingLevel.HEADING_1 }),
+            new Paragraph(
+              `Identified ${context.metrics.totalIdentified} records, stored ${context.metrics.totalStored}, screened ${context.metrics.screened}, included ${context.metrics.included}. Detailed diagram coming soon.`,
+            ),
+          ]
+        : [];
+
+      const doc = new Document({
+        sections: [
+          {
+            children: [...introParagraphs, ...sectionParagraphs, ...ledgerParagraphs, ...prismaParagraphs],
+          },
+        ],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+
+      return {
+        data: buffer,
+        extension: "docx",
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      };
+    },
+  },
 };
 
 function safeBibtexValue(value: unknown) {
@@ -93,6 +187,86 @@ function safeBibtexValue(value: unknown) {
   }
 
   return value.replace(/[{}]/g, "");
+}
+
+function resolveSectionHeading(sectionType: string) {
+  switch (sectionType) {
+    case "literature_review":
+      return "Literature Review";
+    case "introduction":
+      return "Introduction";
+    case "methods":
+      return "Methods";
+    case "results":
+      return "Results";
+    case "discussion":
+      return "Discussion";
+    case "conclusion":
+      return "Conclusion";
+    default:
+      return "Draft Section";
+  }
+}
+
+function extractParagraphs(content: unknown): string[] {
+  const doc = content && typeof content === "object" ? (content as Record<string, unknown>) : {};
+  const children = Array.isArray(doc.content) ? doc.content : Array.isArray(content) ? content : [];
+
+  const paragraphs: string[] = [];
+  const current: string[] = [];
+
+  function walk(node: any, collectParagraph = false) {
+    if (!node || typeof node !== "object") {
+      return;
+    }
+
+    const type = typeof node.type === "string" ? node.type : null;
+
+    if (type === "heading") {
+      if (Array.isArray(node.content)) {
+        node.content.forEach((child: any) => walk(child, false));
+      }
+      flush();
+      return;
+    }
+
+    if (type === "text" && typeof node.text === "string") {
+      current.push(node.text);
+      return;
+    }
+
+    const nextCollect = collectParagraph || type === "paragraph" || type === "bulletList" || type === "orderedList" || type === "listItem";
+
+    if (Array.isArray(node.content) && node.content.length > 0) {
+      node.content.forEach((child: any) => walk(child, nextCollect));
+    }
+
+    if (nextCollect && node !== doc) {
+      flush();
+    }
+  }
+
+  function flush() {
+    if (current.length === 0) {
+      return;
+    }
+    const text = current.join("").replace(/\s+/g, " ").trim();
+    if (text.length > 0) {
+      paragraphs.push(text);
+    }
+    current.splice(0, current.length);
+  }
+
+  if (Array.isArray(children)) {
+    children.forEach((node: any) => {
+      walk(node, false);
+      flush();
+    });
+  }
+
+  flush();
+
+  return paragraphs;
 }
 
 export function getExportAdapter(format: ExportFormat): ExportAdapter | null {

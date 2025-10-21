@@ -35,7 +35,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   citationStyle: "apa",
   exports: {
     enabledFormats: ["docx", "markdown", "bibtex"],
-    defaultFormat: "markdown",
+    defaultFormat: "docx",
     includePrismaDiagram: true,
     includeLedgerExport: true,
   },
