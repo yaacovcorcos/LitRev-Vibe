@@ -135,6 +135,7 @@ export function useEnqueueExport(limit = 25) {
     mutationFn: enqueueExport,
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["export-history", variables.projectId, limit] });
+      queryClient.invalidateQueries({ queryKey: ["export-history", variables.projectId] });
       queryClient.invalidateQueries({ queryKey: ["export-metrics", variables.projectId] });
     },
   });

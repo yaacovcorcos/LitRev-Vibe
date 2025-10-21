@@ -44,12 +44,7 @@ export default function ProjectExportPage() {
   const metrics = metricsQuery.data?.metrics ?? null;
   const history = historyQuery.data?.exports ?? [];
 
-  const formatOptions = useMemo(() => {
-    if (!exportSettings) {
-      return enabledFormats;
-    }
-    return exportSettings.enabledFormats;
-  }, [enabledFormats, exportSettings]);
+  const formatOptions = useMemo(() => exportSettings?.enabledFormats ?? [], [exportSettings]);
 
   useEffect(() => {
     if (!project) {
@@ -64,6 +59,21 @@ export default function ProjectExportPage() {
   }, [project?.id, project?.settings.exports]);
 
   const canSubmit = projectId && !enqueueMutation.isPending;
+
+  const handleReset = () => {
+    if (!project) {
+      setSelectedFormat(defaultFormat);
+      setIncludeLedger(true);
+      setIncludePrisma(true);
+      return;
+    }
+
+    const exportPrefs = project.settings.exports;
+    setSelectedFormat(exportPrefs.defaultFormat ?? exportPrefs.enabledFormats[0] ?? "markdown");
+    setIncludeLedger(exportPrefs.includeLedgerExport);
+    setIncludePrisma(exportPrefs.includePrismaDiagram);
+    setFeedbackMessage(null);
+  };
 
   const handleSubmit = async () => {
     if (!projectId || !selectedFormat) {
@@ -174,7 +184,7 @@ export default function ProjectExportPage() {
                 {enqueueMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Start export
               </Button>
-              <Button variant="ghost" type="button" onClick={() => setSelectedFormat(defaultFormat)} disabled={enqueueMutation.isPending}>
+              <Button variant="ghost" type="button" onClick={handleReset} disabled={enqueueMutation.isPending}>
                 Reset
               </Button>
             </div>
