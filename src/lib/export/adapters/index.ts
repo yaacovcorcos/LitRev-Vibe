@@ -1,3 +1,6 @@
+import { Cite } from "@citation-js/core";
+import "@citation-js/plugin-csl";
+
 import type { ExportContext } from "@/lib/export/context";
 import type { ExportArtifact } from "@/lib/export/storage";
 import { exportFormats, type ExportFormat } from "@/lib/projects/settings";
@@ -153,6 +156,14 @@ const adapters: Partial<Record<ExportFormat, ExportAdapter>> = {
           ]
         : [];
 
+      const references = options.includeLedger ? buildBibliography(context) : [];
+      const referenceParagraphs = references.length > 0
+        ? [
+            new Paragraph({ text: "References", heading: HeadingLevel.HEADING_1 }),
+            ...references.map((reference) => new Paragraph(reference)),
+          ]
+        : [];
+
       const prismaParagraphs = options.includePrismaDiagram
         ? [
             new Paragraph({ text: "PRISMA Snapshot", heading: HeadingLevel.HEADING_1 }),
@@ -165,7 +176,13 @@ const adapters: Partial<Record<ExportFormat, ExportAdapter>> = {
       const doc = new Document({
         sections: [
           {
-            children: [...introParagraphs, ...sectionParagraphs, ...ledgerParagraphs, ...prismaParagraphs],
+            children: [
+              ...introParagraphs,
+              ...sectionParagraphs,
+              ...ledgerParagraphs,
+              ...referenceParagraphs,
+              ...prismaParagraphs,
+            ],
           },
         ],
       });
@@ -187,6 +204,142 @@ function safeBibtexValue(value: unknown) {
   }
 
   return value.replace(/[{}]/g, "");
+}
+
+function buildBibliography(context: ExportContext) {
+  if (context.ledgerEntries.length === 0) {
+    return [] as string[];
+  }
+
+  const items = context.ledgerEntries.map((entry) => ledgerEntryToCsl(entry));
+  const citationStyle = (context.project.settings.citationStyle ?? "apa").toLowerCase();
+
+  try {
+    const cite = new Cite(items);
+    const bibliography = cite.format("bibliography", {
+      format: "text",
+      style: citationStyle === "vancouver" ? "vancouver" : "apa",
+      lang: "en-US",
+    });
+
+    const lines = Array.isArray(bibliography)
+      ? bibliography
+      : String(bibliography).split(/\r?\n/);
+
+    return lines.map((line) => line.trim()).filter((line) => line.length > 0);
+  } catch (error) {
+    console.error("Failed to build bibliography", error);
+    return [];
+  }
+}
+
+function ledgerEntryToCsl(entry: ExportContext["ledgerEntries"][number]) {
+  const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
+
+  const authors = normalizeAuthors(metadata.authors ?? metadata.author);
+  const issued = normalizeIssued(metadata.publishedAt ?? metadata.year);
+
+  const itemType = typeof metadata.type === "string" ? metadata.type : "article-journal";
+
+  return {
+    id: entry.citationKey,
+    type: itemType,
+    title: typeof metadata.title === "string" ? metadata.title : entry.citationKey,
+    author: authors,
+    "container-title": typeof metadata.journal === "string" ? metadata.journal : undefined,
+    issued,
+    volume: typeof metadata.volume === "string" ? metadata.volume : undefined,
+    issue: typeof metadata.issue === "string" ? metadata.issue : undefined,
+    page: typeof metadata.pages === "string" ? metadata.pages : undefined,
+    DOI: typeof metadata.doi === "string" ? metadata.doi : undefined,
+    URL: typeof metadata.url === "string" ? metadata.url : undefined,
+    publisher: typeof metadata.publisher === "string" ? metadata.publisher : undefined,
+  };
+}
+
+function normalizeAuthors(input: unknown): Array<{ given?: string; family?: string }> | undefined {
+  if (!input) {
+    return undefined;
+  }
+
+  const values = Array.isArray(input) ? input : [input];
+
+  const authors: Array<{ given?: string; family?: string }> = [];
+
+  values.forEach((author) => {
+    if (typeof author === "string") {
+      const normalized = author.trim();
+      if (!normalized) {
+        return;
+      }
+
+      if (normalized.includes(",")) {
+        const [familyRaw, givenRaw] = normalized.split(",");
+        const family = familyRaw?.trim();
+        const given = givenRaw?.trim();
+        if (family || given) {
+          authors.push({ family: family || undefined, given: given || undefined });
+        }
+        return;
+      }
+
+      const parts = normalized.split(/\s+/);
+      if (parts.length === 1) {
+        authors.push({ family: parts[0] });
+        return;
+      }
+
+      const family = parts.pop();
+      const given = parts.join(" ");
+      authors.push({ given: given || undefined, family: family || undefined });
+      return;
+    }
+
+    if (author && typeof author === "object") {
+      const record = author as Record<string, unknown>;
+      const given = typeof record.given === "string"
+        ? record.given
+        : typeof record.first === "string"
+          ? record.first
+          : undefined;
+      const family = typeof record.family === "string"
+        ? record.family
+        : typeof record.last === "string"
+          ? record.last
+          : undefined;
+
+      if (given || family) {
+        authors.push({ given, family });
+      }
+    }
+  });
+
+  return authors.length > 0 ? authors : undefined;
+}
+
+function normalizeIssued(value: unknown) {
+  if (!value) {
+    return undefined;
+  }
+
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return { "date-parts": [[value.getFullYear(), value.getMonth() + 1, value.getDate()]] };
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const iso = Date.parse(value);
+    if (!Number.isNaN(iso)) {
+      const date = new Date(iso);
+      return { "date-parts": [[date.getFullYear(), date.getMonth() + 1, date.getDate()]] };
+    }
+
+    const yearMatch = value.match(/(19|20)\d{2}/);
+    if (yearMatch) {
+      return { "date-parts": [[parseInt(yearMatch[0], 10)]] };
+    }
+  }
+
+  return undefined;
 }
 
 function resolveSectionHeading(sectionType: string) {
