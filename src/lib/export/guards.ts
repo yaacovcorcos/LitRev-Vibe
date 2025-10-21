@@ -30,12 +30,6 @@ async function countEntriesMissingLocators(projectId: string) {
       OR: [
         { locators: { equals: Prisma.JsonNull } },
         { locators: { equals: [] } },
-        {
-          locators: {
-            path: ["0"],
-            equals: Prisma.JsonNull,
-          },
-        },
       ],
     },
   });

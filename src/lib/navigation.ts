@@ -36,6 +36,7 @@ export const workspaceNav: NavSection[] = [
     items: [
       { title: 'Planning', href: '/project/:id/planning', icon: NotebookPen },
       { title: 'Draft & Compose', href: '/project/:id/draft', icon: BookText },
+      { title: 'Export', href: '/project/:id/export', icon: Layers },
       { title: 'Settings', href: '/project/:id/settings', icon: Settings2 },
     ],
   },

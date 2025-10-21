@@ -39,6 +39,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
 - `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
 - `hooks/use-discard-candidate.ts` — Mutation helper for tagging candidates as discarded during triage.
+- `hooks/use-exports.ts` — React Query helpers for export history, metrics, and enqueueing export jobs.
 - `hooks/use-compose.ts` — Helpers for enqueuing compose jobs and polling job status.
 - `hooks/use-draft-sections.ts` — Fetch draft sections for the compose workspace and expose the `useUpdateDraftSection` mutation for saves/approvals.
 - `hooks/use-draft-suggestions.ts` — Manage AI suggestions (list, request, resolve) for draft sections.
@@ -57,7 +58,8 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `lib/prisma.ts` — Prisma client singleton usable across API routes and server actions.
 - `lib/utils.ts` — Shared utility helpers (`cn()`).
 - `lib/triage/status.ts` — Triage status enums and helpers for sanitizing state transitions.
-- `lib/export/` — Export jobs, adapters, storage helpers, and context builders.
+- `lib/export/` — Export jobs, adapters, storage helpers, PRISMA diagrams, and context builders.
+- `lib/export/status.ts` — Status display helpers for export lifecycle states.
 - `hooks/` — React Query hooks (projects CRUD, activity log, etc.).
 - `scripts/` — Runtime scripts (`run-worker.ts`).
 - `stories/` — Storybook stories (design tokens, examples).
