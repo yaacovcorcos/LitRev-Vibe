@@ -1,17 +1,22 @@
 import { Queue } from 'bullmq';
 import { createRedisConnection } from './redis';
 
-let queues: { default: Queue };
+const queues: { default: Queue } = (() => {
+  if (process.env.MOCK_REDIS === '1') {
+    let mockJobCounter = 0;
+    const mockQueue = {
+      async add(_name: string, _data: unknown) {
+        mockJobCounter += 1;
+        return { id: `mock-${mockJobCounter}` };
+      },
+    } as unknown as Queue;
 
-if (process.env.MOCK_REDIS === '1') {
-  const mockQueue = {
-    add: async (_name: string, _data: unknown) => ({ id: `mock-${Date.now()}` }),
-  } as unknown as Queue;
+    return { default: mockQueue };
+  }
 
-  queues = { default: mockQueue };
-} else {
   const redis = createRedisConnection();
-  queues = {
+
+  return {
     default: new Queue('default', {
       connection: redis,
       defaultJobOptions: {
@@ -20,7 +25,7 @@ if (process.env.MOCK_REDIS === '1') {
       },
     }),
   };
-}
+})();
 
 export { queues };
 
