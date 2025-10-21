@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { ExportStatus } from "@/generated/prisma";
+import type { PrismaFlowMetrics } from "@/lib/metrics/prisma-flow";
 
 type ExportJobInfo = {
   id: string;
@@ -29,18 +30,14 @@ type ExportHistoryResponse = {
   exports: ExportHistoryItem[];
 };
 
-export type ExportMetrics = {
-  totalIdentified: number;
-  totalStored: number;
-  candidateCounts: Record<string, number>;
-  screened: number;
-  included: number;
-  pending: number;
-  lastSearchCompletedAt: string | null;
-};
+export type ExportMetrics = PrismaFlowMetrics;
 
 type ExportMetricsResponse = {
-  metrics: ExportMetrics;
+  metrics: PrismaFlowMetrics;
+};
+
+type DiagramResponse = {
+  svg: string;
 };
 
 type EnqueueExportInput = {
@@ -69,6 +66,19 @@ async function fetchExportMetrics(projectId: string): Promise<ExportMetricsRespo
   }
 
   return response.json();
+}
+
+async function fetchPrismaDiagram(projectId: string): Promise<DiagramResponse> {
+  const response = await fetch(`/api/projects/${projectId}/exports/prisma-diagram`, {
+    headers: { Accept: "image/svg+xml" },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load PRISMA diagram");
+  }
+
+  const svg = await response.text();
+  return { svg };
 }
 
 async function enqueueExport({ projectId, ...payload }: EnqueueExportInput) {
@@ -106,6 +116,15 @@ export function useExportMetrics(projectId: string | null) {
     queryFn: () => fetchExportMetrics(projectId as string),
     enabled: Boolean(projectId),
     refetchInterval: 15_000,
+  });
+}
+
+export function usePrismaDiagram(projectId: string | null) {
+  return useQuery<DiagramResponse, Error>({
+    queryKey: ["export-prisma-diagram", projectId ?? "unknown"],
+    queryFn: () => fetchPrismaDiagram(projectId as string),
+    enabled: Boolean(projectId),
+    refetchInterval: 30_000,
   });
 }
 

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProject } from "@/hooks/use-projects";
-import { useExportHistory, useExportMetrics, useEnqueueExport } from "@/hooks/use-exports";
+import { useExportHistory, useExportMetrics, useEnqueueExport, usePrismaDiagram } from "@/hooks/use-exports";
 import type { ExportMetrics, ExportHistoryItem } from "@/hooks/use-exports";
 import { getExportStatusDisplay } from "@/lib/export/status";
 import { formatDistanceToNow, format } from "date-fns";
@@ -27,6 +27,7 @@ export default function ProjectExportPage() {
   const { data: projectData, isLoading: projectLoading } = useProject(projectId);
   const historyQuery = useExportHistory(projectId, 25);
   const metricsQuery = useExportMetrics(projectId);
+  const diagramQuery = usePrismaDiagram(projectId);
   const enqueueMutation = useEnqueueExport(25);
 
   const project = projectData ?? null;
@@ -60,7 +61,7 @@ export default function ProjectExportPage() {
     setSelectedFormat(defaultProjectFormat);
     setIncludeLedger(project.settings.exports.includeLedgerExport);
     setIncludePrisma(project.settings.exports.includePrismaDiagram);
-  }, [project?.id]);
+  }, [project?.id, project?.settings.exports]);
 
   const canSubmit = projectId && !enqueueMutation.isPending;
 
@@ -181,14 +182,14 @@ export default function ProjectExportPage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>PRISMA snapshot</CardTitle>
+        <CardHeader>
+          <CardTitle>PRISMA snapshot</CardTitle>
           </CardHeader>
           <CardContent>
-            {metricsQuery.isLoading ? (
-              <Skeleton className="h-48 w-full" />
-            ) : metrics ? (
-              <PrismaSummary metrics={metrics} />
+            {metricsQuery.isLoading || diagramQuery.isLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : metrics && diagramQuery.data ? (
+              <PrismaPreview metrics={metrics} svg={diagramQuery.data.svg} projectId={projectId} />
             ) : (
               <EmptyState message="Metrics unavailable. Run a search to generate PRISMA data." />
             )}
@@ -305,11 +306,23 @@ function ToggleRow({
   );
 }
 
-function PrismaSummary({ metrics }: { metrics: ExportMetrics }) {
+function PrismaPreview({ metrics, svg, projectId }: { metrics: ExportMetrics; svg: string; projectId: string | null }) {
   const data = buildMetricsPresentation(metrics);
+  const inlineSvg = svg.replace(/<\?xml[^>]*>\s*/i, "");
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{data.caption}</span>
+        {projectId ? (
+          <Button asChild size="sm" variant="ghost">
+            <Link href={`/api/projects/${projectId}/exports/prisma-diagram`} prefetch={false}>
+              <ArrowDownToLine className="mr-2 h-3 w-3" /> Download SVG
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-border bg-white p-4" dangerouslySetInnerHTML={{ __html: inlineSvg }} />
       <dl className="grid grid-cols-2 gap-3 text-sm">
         {data.kpis.map((item) => (
           <div key={item.label} className="rounded-md border border-border bg-muted/40 p-3">
@@ -318,7 +331,6 @@ function PrismaSummary({ metrics }: { metrics: ExportMetrics }) {
           </div>
         ))}
       </dl>
-      <p className="text-xs text-muted-foreground">{data.caption}</p>
     </div>
   );
 }

@@ -58,7 +58,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `lib/prisma.ts` — Prisma client singleton usable across API routes and server actions.
 - `lib/utils.ts` — Shared utility helpers (`cn()`).
 - `lib/triage/status.ts` — Triage status enums and helpers for sanitizing state transitions.
-- `lib/export/` — Export jobs, adapters, storage helpers, and context builders.
+- `lib/export/` — Export jobs, adapters, storage helpers, PRISMA diagrams, and context builders.
 - `lib/export/status.ts` — Status display helpers for export lifecycle states.
 - `hooks/` — React Query hooks (projects CRUD, activity log, etc.).
 - `scripts/` — Runtime scripts (`run-worker.ts`).
