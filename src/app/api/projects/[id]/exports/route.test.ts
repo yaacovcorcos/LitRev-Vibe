@@ -42,25 +42,39 @@ const params = {
   },
 };
 
+const BASE_PROJECT = {
+  id: "project-1",
+  settings: {
+    exports: {
+      enabledFormats: ["docx", "markdown"],
+      defaultFormat: "docx",
+      includeLedgerExport: true,
+      includePrismaDiagram: true,
+    },
+    locatorPolicy: "strict",
+    citationStyle: "apa",
+  },
+};
+
+function createPostRequest(body: unknown) {
+  return new Request("http://test.local", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
+
+function createGetRequest(query?: string) {
+  return new Request(`http://test.local${query ? `?${query}` : ""}`);
+}
+
 describe("POST /api/projects/:id/exports", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     supportedFormatsMock.mockReturnValue(["docx", "markdown"]);
 
-    prismaMock.project.findUnique.mockResolvedValue({
-      id: "project-1",
-      settings: {
-        exports: {
-          enabledFormats: ["docx", "markdown"],
-          defaultFormat: "docx",
-          includeLedgerExport: true,
-          includePrismaDiagram: true,
-        },
-        locatorPolicy: "strict",
-        citationStyle: "apa",
-      },
-    });
+    prismaMock.project.findUnique.mockResolvedValue(BASE_PROJECT);
 
     enqueueExportJobMock.mockResolvedValue({ jobId: "job-1", exportId: "export-1" });
     assertExportAllowedMock.mockResolvedValue(undefined);
@@ -69,11 +83,7 @@ describe("POST /api/projects/:id/exports", () => {
   it("returns 404 when project missing", async () => {
     prismaMock.project.findUnique.mockResolvedValueOnce(null);
 
-    const request = new Request("http://test.local", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format: "docx" }),
-    });
+    const request = createPostRequest({ format: "docx" });
 
     const response = await POST(request, params);
     expect(response.status).toBe(404);
@@ -81,24 +91,18 @@ describe("POST /api/projects/:id/exports", () => {
 
   it("returns 400 for disabled format", async () => {
     prismaMock.project.findUnique.mockResolvedValueOnce({
-      id: "project-1",
+      ...BASE_PROJECT,
       settings: {
+        ...BASE_PROJECT.settings,
         exports: {
+          ...BASE_PROJECT.settings.exports,
           enabledFormats: ["markdown"],
           defaultFormat: "markdown",
-          includeLedgerExport: true,
-          includePrismaDiagram: true,
         },
-        locatorPolicy: "strict",
-        citationStyle: "apa",
       },
     });
 
-    const request = new Request("http://test.local", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format: "docx" }),
-    });
+    const request = createPostRequest({ format: "docx" });
 
     const response = await POST(request, params);
     expect(response.status).toBe(400);
@@ -107,11 +111,7 @@ describe("POST /api/projects/:id/exports", () => {
   it("returns 400 when adapter unsupported", async () => {
     supportedFormatsMock.mockReturnValueOnce(["markdown"]);
 
-    const request = new Request("http://test.local", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format: "docx" }),
-    });
+    const request = createPostRequest({ format: "docx" });
 
     const response = await POST(request, params);
     expect(response.status).toBe(400);
@@ -120,22 +120,14 @@ describe("POST /api/projects/:id/exports", () => {
   it("returns 409 when guard blocks export", async () => {
     assertExportAllowedMock.mockRejectedValueOnce(new ExportGuardError("blocked"));
 
-    const request = new Request("http://test.local", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format: "docx" }),
-    });
+    const request = createPostRequest({ format: "docx" });
 
     const response = await POST(request, params);
     expect(response.status).toBe(409);
   });
 
   it("enqueues export with defaults", async () => {
-    const request = new Request("http://test.local", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format: "docx" }),
-    });
+    const request = createPostRequest({ format: "docx" });
 
     const response = await POST(request, params);
     expect(response.status).toBe(202);
@@ -149,15 +141,11 @@ describe("POST /api/projects/:id/exports", () => {
   });
 
   it("respects payload overrides", async () => {
-    const request = new Request("http://test.local", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        format: "markdown",
-        includeLedger: false,
-        includePrismaDiagram: false,
-        actor: "user",
-      }),
+    const request = createPostRequest({
+      format: "markdown",
+      includeLedger: false,
+      includePrismaDiagram: false,
+      actor: "user",
     });
 
     const response = await POST(request, params);
@@ -200,12 +188,12 @@ describe("GET /api/projects/:id/exports", () => {
   });
 
   it("validates query params", async () => {
-    const response = await GET(new Request("http://test.local?limit=0"), params);
+    const response = await GET(createGetRequest("limit=0"), params);
     expect(response.status).toBe(400);
   });
 
   it("returns export history", async () => {
-    const response = await GET(new Request("http://test.local?limit=5"), params);
+    const response = await GET(createGetRequest("limit=5"), params);
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(Array.isArray(json.exports)).toBe(true);
@@ -232,5 +220,32 @@ describe("GET /api/projects/:id/exports", () => {
         },
       },
     });
+  });
+
+  it("uses default limit when not provided", async () => {
+    const response = await GET(createGetRequest(), params);
+    expect(response.status).toBe(200);
+    expect(prismaMock.export.findMany).toHaveBeenCalledWith({
+      where: { projectId: "project-1" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: {
+        job: {
+          select: {
+            id: true,
+            status: true,
+            progress: true,
+            createdAt: true,
+            updatedAt: true,
+            completedAt: true,
+          },
+        },
+      },
+    });
+  });
+
+  it("rejects limit values above maximum", async () => {
+    const response = await GET(createGetRequest("limit=101"), params);
+    expect(response.status).toBe(400);
   });
 });
