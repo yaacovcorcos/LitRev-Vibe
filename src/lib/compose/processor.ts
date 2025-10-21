@@ -273,9 +273,20 @@ export function calculateProgress(state: ComposeJobState, totalSections: number)
     return 1;
   }
 
-  const completed = state.sections.filter((section) => section.status === "completed").length;
-  const running = state.sections.some((section) => section.status === "running") ? 0.4 : 0;
-  return Math.min(1, (completed + running) / totalSections);
+  const { completed, running } = state.sections.reduce(
+    (acc, section) => {
+      if (section.status === "completed") {
+        acc.completed += 1;
+      } else if (section.status === "running") {
+        acc.running += 1;
+      }
+      return acc;
+    },
+    { completed: 0, running: 0 },
+  );
+
+  const baseProgress = (completed + running * 0.5) / totalSections;
+  return Math.min(1, baseProgress);
 }
 
 function fallbackSectionKey(sectionType: string, index: number) {
