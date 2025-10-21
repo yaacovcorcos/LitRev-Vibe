@@ -8,7 +8,21 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
-const enqueueComposeJobMock = vi.hoisted(() => vi.fn(async () => ({ id: "job-123" })));
+const enqueueComposeJobMock = vi.hoisted(() =>
+  vi.fn(async () => ({
+    id: "job-123",
+    projectId: "project-1",
+    jobType: "compose.literature_review",
+    status: "queued",
+    progress: 0,
+    logs: null,
+    resumableState: null,
+    workerId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    completedAt: null,
+  })),
+);
 
 vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
@@ -60,7 +74,19 @@ describe("POST /api/projects/:id/compose", () => {
   beforeEach(() => {
     prismaMock.project.findUnique.mockReset();
     enqueueComposeJobMock.mockReset();
-    enqueueComposeJobMock.mockResolvedValue({ id: "job-123" });
+    enqueueComposeJobMock.mockResolvedValue({
+      id: "job-123",
+      projectId: "project-1",
+      jobType: "compose.literature_review",
+      status: "queued",
+      progress: 0,
+      logs: null,
+      resumableState: null,
+      workerId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedAt: null,
+    });
   });
 
   it("enqueues compose job and returns job id", async () => {

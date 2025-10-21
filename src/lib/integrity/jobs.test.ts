@@ -21,7 +21,7 @@ vi.mock("@/lib/integrity/feeds", () => ({
   ingestIntegrityFeeds: ingestIntegrityFeedsMock,
 }));
 
-const { enqueueIntegrityIngestionJob, processIntegrityIngestionJob } = await import("./jobs");
+import { enqueueIntegrityIngestionJob, processIntegrityIngestionJob } from "./jobs.js";
 
 describe("integrity jobs", () => {
   beforeEach(() => {

@@ -4,6 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { queues } from "@/lib/queue/queue";
 import { generateTriageRationale } from "@/lib/ai/rationale";
 
+type CandidateContext = {
+  id: string;
+  metadata: Record<string, unknown>;
+  searchAdapter: string;
+  locatorSnippets: unknown;
+};
+
 const triageJobSchema = z.object({
   projectId: z.string(),
   candidateIds: z.array(z.string()).optional(),
@@ -55,9 +62,15 @@ export async function processTriageRationaleJob(data: unknown): Promise<TriageJo
 
   for (const candidate of candidates) {
     try {
+      const normalizedCandidate: CandidateContext = {
+        ...candidate,
+        metadata: (candidate.metadata ?? {}) as Record<string, unknown>,
+        locatorSnippets: candidate.locatorSnippets ?? null,
+      };
+
       const rationale = await generateTriageRationale({
         projectId: candidate.projectId,
-        candidate,
+        candidate: normalizedCandidate,
       });
 
       await prisma.candidate.update({

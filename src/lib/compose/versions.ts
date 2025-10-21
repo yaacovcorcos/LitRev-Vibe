@@ -1,4 +1,4 @@
-import type { Prisma, DraftSection } from "@/generated/prisma";
+import type { Prisma, DraftSection, DraftSectionVersion } from "@/generated/prisma";
 
 import { prisma } from "@/lib/prisma";
 
@@ -13,7 +13,7 @@ export async function recordDraftSectionVersion(
       draftSectionId: section.id,
       version: section.version,
       status: section.status,
-      content: section.content,
+      content: section.content as Prisma.InputJsonValue,
     },
   });
 }
@@ -38,7 +38,7 @@ export async function ensureDraftSectionVersion(
 
 export { ensureDraftSectionVersion as ensureDraftSectionVersionSnapshot };
 
-export async function listDraftSectionVersions(projectId: string, sectionId: string) {
+export async function listDraftSectionVersions(projectId: string, sectionId: string): Promise<DraftSectionVersion[]> {
   const section = await prisma.draftSection.findFirst({
     where: { id: sectionId, projectId },
   });
@@ -57,7 +57,7 @@ export async function rollbackDraftSection(
   projectId: string,
   sectionId: string,
   version: number,
-) {
+): Promise<DraftSection> {
   return prisma.$transaction(async (tx) => {
     const section = await tx.draftSection.findFirst({
       where: { id: sectionId, projectId },
@@ -85,7 +85,7 @@ export async function rollbackDraftSection(
     const updated = await tx.draftSection.update({
       where: { id: sectionId },
       data: {
-        content: snapshot.content,
+        content: snapshot.content as Prisma.InputJsonValue,
         status: snapshot.status,
         version: newVersionNumber,
       },

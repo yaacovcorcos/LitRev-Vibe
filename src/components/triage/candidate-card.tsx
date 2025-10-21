@@ -72,32 +72,34 @@ function parseIntegrityFlags(value: unknown): ParsedIntegrityFlag[] {
     return [];
   }
 
-  return value
-    .map((item) => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) {
-        return null;
-      }
+  const flags: ParsedIntegrityFlag[] = [];
 
-      const flag = item as IntegrityFlagRecord;
-      const label = typeof flag.label === "string" ? flag.label : null;
-      const severityRaw = typeof flag.severity === "string" ? flag.severity : null;
-      const source = typeof flag.source === "string" ? flag.source : "unknown";
-      const reason = typeof flag.reason === "string" ? flag.reason : undefined;
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      continue;
+    }
 
-      if (!label || !severityRaw) {
-        return null;
-      }
+    const flag = item as IntegrityFlagRecord;
+    const label = typeof flag.label === "string" ? flag.label : null;
+    const severityRaw = typeof flag.severity === "string" ? flag.severity : null;
 
-      const severity = severityRaw === "critical" || severityRaw === "warning" ? severityRaw : "info";
+    if (!label || !severityRaw) {
+      continue;
+    }
 
-      return {
-        label,
-        severity,
-        source,
-        reason,
-      } satisfies ParsedIntegrityFlag;
-    })
-    .filter((flag): flag is ParsedIntegrityFlag => flag !== null);
+    const severity: ParsedIntegrityFlag["severity"] =
+      severityRaw === "critical" || severityRaw === "warning" ? severityRaw : "info";
+    const source = typeof flag.source === "string" ? flag.source : "unknown";
+    const parsed: ParsedIntegrityFlag = { label, severity, source };
+
+    if (typeof flag.reason === "string" && flag.reason.trim()) {
+      parsed.reason = flag.reason;
+    }
+
+    flags.push(parsed);
+  }
+
+  return flags;
 }
 
 type CandidateCardProps = {

@@ -61,11 +61,13 @@ export default function DraftPage() {
   const versionsQuery = useDraftVersions(projectId, activeSection?.id ?? null);
   const rollbackMutation = useRollbackDraftVersion();
 
+  const firstSectionId = sections.length > 0 ? sections[0].id : null;
+
   useEffect(() => {
-    if (!activeSectionId && sections.length > 0) {
-      setActiveSectionId(sections[0].id);
+    if (!activeSectionId && firstSectionId) {
+      setActiveSectionId(firstSectionId);
     }
-  }, [activeSectionId, sections]);
+  }, [activeSectionId, firstSectionId]);
 
   useEffect(() => {
     if (!activeSection) {
@@ -75,7 +77,7 @@ export default function DraftPage() {
 
     setPendingContent(activeSection.content);
     setFeedbackMessage(null);
-  }, [activeSection?.id]);
+  }, [activeSection]);
 
   const isApproved = activeSection?.status === "approved";
   const isUpdating = updateSection.isPending;

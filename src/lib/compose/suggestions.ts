@@ -160,7 +160,7 @@ export async function resolveDraftSuggestion(
       const updatedSection = await tx.draftSection.update({
         where: { id: suggestion.draftSectionId },
         data: {
-          content: suggestion.content,
+          content: suggestion.content as Prisma.InputJsonValue,
           version: section.version + 1,
           status: "draft",
         },
@@ -271,8 +271,8 @@ function appendParagraph(content: Prisma.JsonValue | null | undefined, paragraph
   };
 }
 
-function toJson<T>(value: T) {
-  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.JsonValue;
+function toJson<T>(value: T): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
 }
 
 function asJsonObject(value: Prisma.JsonValue | null | undefined): Record<string, unknown> | null {

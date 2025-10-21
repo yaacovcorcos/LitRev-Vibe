@@ -62,7 +62,7 @@ export async function applyIntegrityFlags(updates: CandidateIntegrityUpdate[], o
       prisma.candidate.update({
         where: { id: update.candidateId },
         data: {
-          integrityFlags: (update.flags as unknown) as Prisma.JsonValue,
+          integrityFlags: JSON.parse(JSON.stringify(update.flags ?? null)) as Prisma.InputJsonValue,
         },
       }).then(() => {
         onUpdate?.();

@@ -3,29 +3,31 @@
 Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone cadence. Document notable features, fixes, and infrastructure changes.
 
 ## [Unreleased]
-- Add triage AI scaffolding: cached rationale generation, Ask-AI endpoint, and triage card updates.
-- Introduce Evidence Ledger workspace skeleton with paginated API + inspector placeholder.
-- Add manual locator capture API + inspector form for ledger entries.
-- Surface locator verification status and pending warnings in the ledger workspace.
-- Enforce locator requirement during triage “keep” flow with API + UI guardrails.
-- Limit triage queue to pending candidates and hide kept references post-enforcement.
-- Capture locator quotes and sources during keep + inspector workflows.
-- Log activity entries when references move from triage to ledger.
-- Add locator status helper with UI badges plus unit tests.
-- Implement compose citation validator ensuring only verified ledger references are cited.
-- Connect triage rationale & Ask-AI endpoints to OpenAI (fallbacks retained offline).
-- Augment Ask-AI fallback with abstract-based quotes for environments without PDF snippets.
-- Add integrity feed ingestion stub using local Retraction Watch/DOAJ datasets and candidate flagging.
-- Separate locator "pending review" state with manual verification controls in ledger UI.
-- Add triage rationale queue job for OpenAI batching with retry metrics.
-- Use stored locator snippets when available (fallback for Ask-AI quotes and prompts).
-- Added snippet extraction API/button to refresh PDF quotes from triage.
-- Highlighted integrity flags on triage cards with severity messaging.
-- Finalized locator status display helpers and added tests for pending/review/verified states.
-- Provide Storybook coverage for locator summaries.
-- Queue-backed integrity feed ingestion job (Retraction Watch/DOAJ).
-- Scheduled nightly integrity ingestion via worker cron hook with tests.
-- Highlight integrity flags directly on triage cards with severity messaging.
+- Added `/projects` workspace view with create/delete flows, quick links into planning/triage/ledger/draft, and refresh controls.
+- Hardened locator capture pipeline (API + UI) and aligned JSON payloads with Prisma types.
+- Cleaned documentation (`README.md`, `CHANGELOG.md`) to prep for the export milestone.
+
+## [2025-10-16] Milestone 4 — Draft & Compose
+- Delivered compose queue job with citation validation, draft section persistence, and resumable progress tracking.
+- Built Draft workspace UI (Tiptap editor, section selector, approvals, version restore, job status wiring).
+- Implemented AI suggestion workflow with activity logging, acceptance/dismissal flows, and versioned snapshots.
+- Added compose worker coverage (Vitest + Playwright resume harness) and runs dashboard integration.
+
+## [2025-10-15] Milestone 3 — Triage & Evidence Ledger
+- Introduced Evidence Ledger inspector with locator management, integrity notes, and pagination scaffolding.
+- Enforced locator-on-keep rule (API + React Query hooks) and locator verification states with badges/banners.
+- Connected triage rationale + Ask-AI endpoints to OpenAI with graceful fallbacks and snippet extraction jobs.
+- Wired integrity feed ingestion (Retraction Watch / DOAJ stubs), nightly scheduler, and candidate flag surfacing.
+
+## [2025-10-14] Milestone 2 — Search Stack
+- Added PubMed + Crossref search adapters with rate limiting and Unpaywall enrichment.
+- Persisted search candidates via background jobs, with queue retries and telemetry summaries.
+- Exposed triage workspace skeleton, candidate cards, and Ask-AI scaffolding.
+
+## [2025-10-13] Milestone 1 — Shell & Planning
+- Implemented App Shell (sidebar/header/command palette) and global layout wiring.
+- Added project CRUD REST endpoints, React Query hooks, and planning workspace with editable sections.
+- Introduced activity log scaffolding and navigation metadata.
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.

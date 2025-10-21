@@ -42,10 +42,17 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   try {
-    const suggestion = await createDraftSuggestion({
+    const suggestionType = parsed.data.suggestionType ?? "improvement";
+    const createPayload: Parameters<typeof createDraftSuggestion>[0] = {
       projectId: params.id,
-      ...parsed.data,
-    });
+      draftSectionId: parsed.data.draftSectionId,
+      suggestionType,
+      ...(parsed.data.narrativeVoice
+        ? { narrativeVoice: parsed.data.narrativeVoice }
+        : {}),
+    };
+
+    const suggestion = await createDraftSuggestion(createPayload);
 
     return NextResponse.json({ suggestion }, { status: 201 });
   } catch (error) {

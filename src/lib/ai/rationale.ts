@@ -120,46 +120,48 @@ function extractLocatorSnippets(candidate: GenerateContext["candidate"], limit =
       ? Object.values(raw as Record<string, unknown>)
       : [];
 
-  const snippets = snippetsArray
-    .map((entry) => {
-      if (!entry || typeof entry !== "object") {
-        return null;
-      }
+  const snippets: AskAiResponse["quotes"] = [];
 
-      const record = entry as Record<string, unknown>;
-      const text = typeof record.text === "string" ? record.text.trim() : null;
-      if (!text) {
-        return null;
-      }
+  for (const entry of snippetsArray) {
+    if (!entry || typeof entry !== "object") {
+      continue;
+    }
 
-      const sourceParts: string[] = [];
-      if (typeof record.source === "string" && record.source.trim()) {
-        sourceParts.push(record.source.trim());
-      }
-      if (typeof record.page === "number") {
-        sourceParts.push(`Page ${record.page}`);
-      } else if (typeof record.page === "string" && record.page.trim()) {
-        sourceParts.push(`Page ${record.page.trim()}`);
-      }
-      if (typeof record.paragraph === "number") {
-        sourceParts.push(`Paragraph ${record.paragraph}`);
-      }
-      if (typeof record.sentence === "number") {
-        sourceParts.push(`Sentence ${record.sentence}`);
-      }
+    const record = entry as Record<string, unknown>;
+    const text = typeof record.text === "string" ? record.text.trim() : null;
+    if (!text) {
+      continue;
+    }
 
-      return {
-        text,
-        source: sourceParts.length > 0 ? sourceParts.join(" · ") : undefined,
-      } satisfies AskAiResponse["quotes"][number];
-    })
-    .filter((snippet): snippet is AskAiResponse["quotes"][number] => Boolean(snippet && snippet.text));
+    const sourceParts: string[] = [];
+    if (typeof record.source === "string" && record.source.trim()) {
+      sourceParts.push(record.source.trim());
+    }
+    if (typeof record.page === "number") {
+      sourceParts.push(`Page ${record.page}`);
+    } else if (typeof record.page === "string" && record.page.trim()) {
+      sourceParts.push(`Page ${record.page.trim()}`);
+    }
+    if (typeof record.paragraph === "number") {
+      sourceParts.push(`Paragraph ${record.paragraph}`);
+    }
+    if (typeof record.sentence === "number") {
+      sourceParts.push(`Sentence ${record.sentence}`);
+    }
 
-  if (snippets.length === 0) {
-    return [];
+    const quote: AskAiResponse["quotes"][number] = {
+      text,
+      ...(sourceParts.length > 0 ? { source: sourceParts.join(" · ") } : {}),
+    };
+
+    snippets.push(quote);
+
+    if (snippets.length >= limit) {
+      break;
+    }
   }
 
-  return snippets.slice(0, limit);
+  return snippets;
 }
 
 function parseJSON<T>(raw: string): T | null {
@@ -218,7 +220,7 @@ function extractAbstractQuotes(context: AskAiContext | GenerateContext, limit = 
 }
 
 function fallbackAskResponse(context: AskAiContext, title: string): AskAiResponse {
-  const snippetQuotes = extractLocatorSnippets(context, 2);
+  const snippetQuotes = extractLocatorSnippets(context.candidate, 2);
   const quotes = snippetQuotes.length > 0 ? snippetQuotes : extractAbstractQuotes(context, 2);
   return {
     answer: `Unable to contact OpenAI in this environment. When asked "${context.question}", the assistant would summarize "${title}" with supporting quotes once connectivity is available.`,
