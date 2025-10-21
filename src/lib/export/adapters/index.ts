@@ -268,12 +268,30 @@ function normalizeAuthors(input: unknown): Array<{ given?: string; family?: stri
 
   values.forEach((author) => {
     if (typeof author === "string") {
-      const [familyRaw, givenRaw] = author.split(",");
-      const family = familyRaw?.trim();
-      const given = givenRaw?.trim();
-      if (family || given) {
-        authors.push({ family: family || undefined, given: given || undefined });
+      const normalized = author.trim();
+      if (!normalized) {
+        return;
       }
+
+      if (normalized.includes(",")) {
+        const [familyRaw, givenRaw] = normalized.split(",");
+        const family = familyRaw?.trim();
+        const given = givenRaw?.trim();
+        if (family || given) {
+          authors.push({ family: family || undefined, given: given || undefined });
+        }
+        return;
+      }
+
+      const parts = normalized.split(/\s+/);
+      if (parts.length === 1) {
+        authors.push({ family: parts[0] });
+        return;
+      }
+
+      const family = parts.pop();
+      const given = parts.join(" ");
+      authors.push({ given: given || undefined, family: family || undefined });
       return;
     }
 
