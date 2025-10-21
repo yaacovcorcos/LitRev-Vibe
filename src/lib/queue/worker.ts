@@ -38,7 +38,14 @@ export const defaultWorker = new Worker(
       case EXPORT_QUEUE_JOB_NAME:
         return processExportJob(job.data);
       default:
-        logger.warn({ jobName: job.name }, 'Unhandled job type, echoing payload');
+        logger.warn(
+          {
+            jobName: job.name,
+            jobId: job.id,
+            payloadKeys: job.data && typeof job.data === 'object' ? Object.keys(job.data as Record<string, unknown>) : [],
+          },
+          'Unhandled job type, echoing payload',
+        );
         return job.data;
     }
   },

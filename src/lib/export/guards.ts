@@ -1,3 +1,4 @@
+import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import type { ProjectSettings } from "@/lib/projects/settings";
 
@@ -23,16 +24,19 @@ export async function assertExportAllowed(projectId: string, settings: ProjectSe
 }
 
 async function countEntriesMissingLocators(projectId: string) {
-  const result = await prisma.$queryRaw<{ count: number }[]>`
-    SELECT COUNT(*)::int as count
-    FROM "LedgerEntry"
-    WHERE "projectId" = ${projectId}
-      AND (
-        locators IS NULL
-        OR jsonb_typeof(locators) <> 'array'
-        OR jsonb_array_length(locators) = 0
-      )
-  `;
-
-  return result.length > 0 ? Number(result[0].count) : 0;
+  return prisma.ledgerEntry.count({
+    where: {
+      projectId,
+      OR: [
+        { locators: { equals: Prisma.JsonNull } },
+        { locators: { equals: [] } },
+        {
+          locators: {
+            path: ["0"],
+            equals: Prisma.JsonNull,
+          },
+        },
+      ],
+    },
+  });
 }

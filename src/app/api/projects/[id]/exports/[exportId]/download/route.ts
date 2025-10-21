@@ -38,7 +38,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const buffer = await fs.readFile(absolutePath);
     const ext = path.extname(absolutePath) || `.${record.format}`;
-    const filename = `${slugify(record.project.name ?? "export")}-${params.exportId}${ext}`;
+    const projectName = record.project?.name?.trim() || `project-${record.projectId}`;
+    const filename = `${slugify(projectName)}-${params.exportId}${ext}`;
     const contentType = inferContentType(record.format);
 
     const headers = new Headers();
