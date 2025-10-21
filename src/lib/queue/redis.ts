@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { EventEmitter } from 'events';
 
 let client: Redis | null = null;
 
@@ -11,6 +12,21 @@ export function createRedisConnection(): Redis {
 
   if (!url) {
     throw new Error('REDIS_URL is not set. Please configure Redis before running the queue worker.');
+  }
+
+  if (process.env.MOCK_REDIS === '1') {
+    class MockRedis extends EventEmitter {
+      duplicate() {
+        return this;
+      }
+
+      async quit() {
+        return undefined;
+      }
+    }
+
+    client = new MockRedis() as unknown as Redis;
+    return client;
   }
 
   client = new Redis(url, {

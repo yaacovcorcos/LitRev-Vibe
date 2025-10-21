@@ -18,3 +18,8 @@ Document pivotal architectural or product choices. For each entry, capture the c
 - **Context:** Milestone plan requires resumable search/compose/export with queue visibility.
 - **Decision:** Adopt BullMQ with Redis (worker outside Vercel limits); expose job status via Runs UI.
 - **Consequences:** Queue infrastructure must be provisioned alongside app deployments; future jobs should reuse shared worker helpers in `src/lib/queue`.
+
+### 2025-10-16 — Draft Version Snapshots for Idempotent Compose
+- **Context:** Compose retries could duplicate draft sections when BullMQ reruns a job after partial completion.
+- **Decision:** Persist per-version snapshots in `DraftSectionVersion`, rehydrate resumable state from job records, and reuse existing draft IDs when a section restarts.
+- **Consequences:** Compose jobs become idempotent across retries; rollback APIs and UI can restore earlier versions without data loss.

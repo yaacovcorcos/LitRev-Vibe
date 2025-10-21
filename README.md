@@ -10,7 +10,7 @@ An AI-assisted medical literature review and authoring workspace. The MVP is bei
 - **Component Library:** shadcn/ui (New York style)
 - **State/Queues:** BullMQ + Redis
 - **Database ORM:** Prisma (PostgreSQL)
-- **Testing/Stories:** Storybook (smoke tests); additional testing TBD
+- **Testing/Stories:** Vitest, Playwright (compose resumable flow), Storybook (smoke tests)
 - **Tooling:** pnpm, ESLint, PostCSS
 
 ## Project Structure
@@ -75,6 +75,7 @@ In CI, the same script runs via [`.github/workflows/ci.yml`](.github/workflows/c
 2. Copy env template: `cp .env.example .env` (fill values as needed)
 3. Run dev server: `pnpm run dev`
 4. Run Storybook: `pnpm run storybook` (optional)
+5. Run Playwright checks (optional): `pnpm run playwright:test` *(uses mock Redis in test harness)*
 
 ## Application Development
 

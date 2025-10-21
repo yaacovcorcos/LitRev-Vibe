@@ -14,6 +14,7 @@
     "format:check": "echo \"format placeholder\"",
     "lint": "next lint",
     "test": "pnpm exec vitest run",
+    "playwright:test": "pnpm exec playwright test",
     "storybook:test": "pnpm exec storybook dev --ci --smoke-test",
     "worker": "pnpm exec ts-node --transpile-only src/scripts/run-worker.ts",
     "queue:smoke": "REDIS_URL=redis://localhost:6379 pnpm run worker",
@@ -30,6 +31,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@storybook/addon-essentials": "8.6.14",
     "@storybook/addon-interactions": "8.6.14",
     "@storybook/addon-links": "^8.6.14",

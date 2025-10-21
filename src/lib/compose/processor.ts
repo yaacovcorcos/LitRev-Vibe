@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { updateJobRecord } from "@/lib/jobs";
 
 import { assertCitationsValid } from "./citation-validator";
+import { ensureDraftSectionVersion, recordDraftSectionVersion } from "./versions";
 import {
   type ComposeJobQueuePayload,
   type ComposeJobState,
@@ -50,7 +51,7 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
     await updateJobRecord({
       jobId,
       status: "in_progress",
-      progress: completedRatio(state, totalSections),
+      progress: calculateProgress(state, totalSections),
       resumableState: state,
     });
 
@@ -70,7 +71,7 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
       await updateJobRecord({
         jobId,
         status: "in_progress",
-        progress: completedRatio(state, totalSections),
+        progress: calculateProgress(state, totalSections),
         resumableState: state,
       });
 
@@ -94,6 +95,15 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
           throw new Error(`Draft section ${existing.id} does not belong to project ${projectId}`);
         }
 
+        if (existing) {
+          await ensureDraftSectionVersion(tx, {
+            id: existing.id,
+            version: existing.version,
+            status: existing.status,
+            content: existing.content,
+          });
+        }
+
         const record = existing
           ? await tx.draftSection.update({
             where: { id: existing.id },
@@ -113,6 +123,13 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
               version: 1,
             },
           });
+
+        await recordDraftSectionVersion(tx, {
+          id: record.id,
+          version: record.version,
+          status: record.status,
+          content: record.content,
+        });
 
         await tx.draftSectionOnLedger.deleteMany({
           where: { draftSectionId: record.id },
@@ -144,18 +161,19 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
         },
       });
 
-      const isFinalSection = completedRatio(state, totalSections) === 1;
+      const progress = calculateProgress(state, totalSections);
+      const isFinalSection = progress === 1;
 
       await updateJobRecord({
         jobId,
         status: isFinalSection ? "completed" : "in_progress",
-        progress: completedRatio(state, totalSections),
+        progress,
         resumableState: state,
         ...(isFinalSection ? { completedAt: new Date() } : {}),
       });
     }
 
-    const finalRatio = completedRatio(state, totalSections);
+    const finalRatio = calculateProgress(state, totalSections);
     if (finalRatio === 1) {
       await updateJobRecord({
         jobId,
@@ -203,7 +221,7 @@ function setSectionState(section: ComposeJobState["sections"][number], status: C
   }
 }
 
-function ensureSectionState(state: ComposeJobState, sectionInput: ComposeJobQueuePayload["sections"][number], index: number) {
+export function ensureSectionState(state: ComposeJobState, sectionInput: ComposeJobQueuePayload["sections"][number], index: number) {
   if (!state.sections[index]) {
     state.sections[index] = {
       key: sectionInput.sectionId ?? fallbackSectionKey(sectionInput.sectionType, index),
@@ -221,7 +239,7 @@ function ensureSectionState(state: ComposeJobState, sectionInput: ComposeJobQueu
   return state.sections[index];
 }
 
-function mergeStateWithPayload(persisted: ComposeJobState, payload: ComposeJobQueuePayload) {
+export function mergeStateWithPayload(persisted: ComposeJobState, payload: ComposeJobQueuePayload) {
   const hydrated = cloneState(persisted);
 
   payload.sections.forEach((section, index) => {
@@ -242,12 +260,22 @@ function mergeStateWithPayload(persisted: ComposeJobState, payload: ComposeJobQu
   return hydrated;
 }
 
-function completedRatio(state: ComposeJobState, totalSections: number) {
+export function completedRatio(state: ComposeJobState, totalSections: number) {
   if (totalSections === 0) {
     return 1;
   }
   const count = state.sections.filter((section) => section.status === "completed").length;
   return Math.min(1, count / totalSections);
+}
+
+export function calculateProgress(state: ComposeJobState, totalSections: number) {
+  if (totalSections === 0) {
+    return 1;
+  }
+
+  const completed = state.sections.filter((section) => section.status === "completed").length;
+  const running = state.sections.some((section) => section.status === "running") ? 0.4 : 0;
+  return Math.min(1, (completed + running) / totalSections);
 }
 
 function fallbackSectionKey(sectionType: string, index: number) {

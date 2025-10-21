@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { BookText, Loader2, PenSquare, RotateCcw, Send } from "lucide-react";
+import { BookText, Clock3, Loader2, PenSquare, RotateCcw, Send } from "lucide-react";
 
 import { DraftEditor } from "@/components/draft/draft-editor";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useDraftSections } from "@/hooks/use-draft-sections";
 import { useDraftSuggestions, useRequestDraftSuggestion, useResolveDraftSuggestion } from "@/hooks/use-draft-suggestions";
 import { useLedgerEntries } from "@/hooks/use-ledger";
 import { useEnqueueComposeJob, useJobStatus } from "@/hooks/use-compose";
+import { useDraftVersions, useRollbackDraftVersion } from "@/hooks/use-draft-versions";
 
 function getSectionLabel(sectionType: string) {
   switch (sectionType) {
@@ -54,6 +55,8 @@ export default function DraftPage() {
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0] ?? null;
   const suggestionsQuery = useDraftSuggestions(projectId, activeSection?.id ?? null);
   const suggestions = suggestionsQuery.data?.suggestions ?? [];
+  const versionsQuery = useDraftVersions(projectId, activeSection?.id ?? null);
+  const rollbackMutation = useRollbackDraftVersion();
 
   useEffect(() => {
     if (!activeSectionId && sections.length > 0) {
@@ -72,6 +75,7 @@ export default function DraftPage() {
   }, [ledgerData]);
 
   const isComposeDisabled = verifiedLedgerIds.length === 0 || composeMutation.isPending;
+  const isRollbackDisabled = rollbackMutation.isPending || !versionsQuery.data?.versions?.length;
 
   const handleCompose = () => {
     if (!projectId) {
@@ -120,6 +124,25 @@ export default function DraftPage() {
       suggestionId,
       action,
     });
+  };
+
+  const handleRollback = (version: number | null) => {
+    if (!projectId || !activeSection || !version) {
+      return;
+    }
+
+    rollbackMutation.mutate(
+      {
+        projectId,
+        sectionId: activeSection.id,
+        version,
+      },
+      {
+        onSuccess: () => {
+          refetch();
+        },
+      },
+    );
   };
 
   useEffect(() => {
@@ -174,8 +197,16 @@ export default function DraftPage() {
                 <span className="flex items-center gap-2"><PenSquare className="h-4 w-4" /> Compose literature review</span>
               )}
             </Button>
-            <Button variant="outline" disabled>
-              <RotateCcw className="mr-2 h-4 w-4" /> Rollback version
+            <Button
+              variant="outline"
+              disabled={isRollbackDisabled || !activeSection}
+              onClick={() => handleRollback(versionsQuery.data?.versions?.[0]?.version ?? null)}
+            >
+              {rollbackMutation.isPending ? (
+                <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Rolling back…</span>
+              ) : (
+                <span className="flex items-center gap-2"><RotateCcw className="h-4 w-4" /> Rollback version</span>
+              )}
             </Button>
           </div>
         </div>
@@ -267,6 +298,43 @@ export default function DraftPage() {
                   </p>
                 )}
               </footer>
+
+              <section className="space-y-3 rounded-lg border border-muted-foreground/40 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground">Version history</h3>
+                </div>
+                {versionsQuery.isLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : versionsQuery.data && versionsQuery.data.versions.length > 0 ? (
+                  <ul className="space-y-2 text-xs text-muted-foreground">
+                    {versionsQuery.data.versions.map((version) => (
+                      <li key={version.id} className="flex items-center justify-between gap-3 rounded border border-border bg-background px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Clock3 className="h-3 w-3" />
+                          <span className="font-medium">v{version.version}</span>
+                          <Badge variant="outline">{version.status}</Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>{new Date(version.createdAt).toLocaleString()}</span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={rollbackMutation.isPending || version.version === activeSection.version}
+                            onClick={() => handleRollback(version.version)}
+                          >
+                            Restore
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Version history unavailable.</p>
+                )}
+              </section>
 
               <section className="space-y-3 rounded-lg border border-dashed border-muted-foreground/40 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">

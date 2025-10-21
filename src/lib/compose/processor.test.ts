@@ -9,6 +9,8 @@ const hoisted = vi.hoisted(() => {
     transactionMock: vi.fn(),
     queueAdd: vi.fn(),
     jobFindUnique: vi.fn(async () => ({ resumableState: null })),
+    ensureDraftSectionVersion: vi.fn(async () => {}),
+    recordDraftSectionVersion: vi.fn(async () => {}),
   };
 });
 
@@ -50,6 +52,11 @@ vi.mock("./citation-validator", () => ({
   assertCitationsValid: hoisted.assertCitationsValid,
 }));
 
+vi.mock("./versions", () => ({
+  ensureDraftSectionVersion: hoisted.ensureDraftSectionVersion,
+  recordDraftSectionVersion: hoisted.recordDraftSectionVersion,
+}));
+
 const {
   updateJobRecord,
   logActivity,
@@ -58,6 +65,8 @@ const {
   transactionMock,
   queueAdd,
   jobFindUnique,
+  ensureDraftSectionVersion,
+  recordDraftSectionVersion,
 } = hoisted;
 
 import { buildInitialState } from "./jobs";
@@ -121,6 +130,8 @@ describe("processComposeJob", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     jobFindUnique.mockResolvedValue({ resumableState: null });
+    ensureDraftSectionVersion.mockReset();
+    recordDraftSectionVersion.mockReset();
   });
 
   it("generates draft sections and updates job progress", async () => {
@@ -182,6 +193,8 @@ describe("processComposeJob", () => {
         }),
       }),
     );
+    expect(ensureDraftSectionVersion).not.toHaveBeenCalled();
+    expect(recordDraftSectionVersion).toHaveBeenCalled();
   });
 
   it("marks job as failed when ledger entries are missing", async () => {

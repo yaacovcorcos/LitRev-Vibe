@@ -11,6 +11,8 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Introduced Draft workspace page with section list, compose trigger wired to ledger prerequisites, and read-only Tiptap viewer for generated content.
 - Added suggestion workflow scaffolding: Prisma model, generation stubs, API endpoints, and UI controls for requesting/accepting AI draft improvements.
 - Hardened compose worker retries by rehydrating persisted state to prevent duplicate draft sections and improved version tracking payloads.
+- Implemented runs dashboard and job listing API with live progress polling; compose worker updates now stream progress for in-progress jobs and record version snapshots around retries.
+- Added Playwright harness validating compose job resume logic; introduced MOCK_REDIS guard so tests can run without external Redis.
 
 ### 2025-10-16 — Compose Worker Implementation
 - Implemented `processComposeJob` to validate ledger citations, persist draft sections, and update job progress with resumable state snapshots.

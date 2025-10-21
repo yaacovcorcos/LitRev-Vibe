@@ -32,6 +32,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `components/providers/` — Cross-cutting providers (React Query, etc.).
 - `components/ui/` — shadcn/ui generated primitives (buttons, cards, textarea, etc.).
 - `app/project/[id]/ledger/` — Evidence Ledger workspace surface and inspector.
+- `app/runs/` — Automation runs dashboard showing job progress.
 - `hooks/use-candidate-rationale.ts` — React Query helpers for fetching and asking AI about a candidate.
 - `hooks/use-keep-candidate.ts` — Mutation helper for enforcing locator requirement before keeping to ledger.
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
@@ -39,6 +40,8 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-compose.ts` — Helpers for enqueuing compose jobs and polling job status.
 - `hooks/use-draft-sections.ts` — Fetch draft sections for the compose workspace.
 - `hooks/use-draft-suggestions.ts` — Manage AI suggestions (list, request, resolve) for draft sections.
+- `hooks/use-draft-versions.ts` — Fetch version history and trigger rollbacks for draft sections.
+- `hooks/use-jobs.ts` — Fetch automation job runs with polling.
 - `lib/integrity/` — Integrity feed ingestion stubs, queue jobs, scheduler helpers.
 - `lib/ledger/` — Locator status helpers and related utilities.
 - `lib/compose/` — Compose workflow helpers (citation validator, job contracts, worker processor, resumable state utilities).

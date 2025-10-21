@@ -15,6 +15,10 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 const logActivityMock = vi.hoisted(() => vi.fn());
+const versionsMock = vi.hoisted(() => ({
+  ensureDraftSectionVersion: vi.fn(),
+  recordDraftSectionVersion: vi.fn(),
+}));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
@@ -22,6 +26,11 @@ vi.mock("@/lib/prisma", () => ({
 
 vi.mock("@/lib/activity-log", () => ({
   logActivity: logActivityMock,
+}));
+
+vi.mock("@/lib/compose/versions", () => ({
+  ensureDraftSectionVersion: versionsMock.ensureDraftSectionVersion,
+  recordDraftSectionVersion: versionsMock.recordDraftSectionVersion,
 }));
 
 import { createDraftSuggestion, resolveDraftSuggestion } from "./suggestions";
@@ -40,6 +49,8 @@ describe("draft suggestions helpers", () => {
       }
     });
     logActivityMock.mockReset();
+    versionsMock.ensureDraftSectionVersion.mockReset();
+    versionsMock.recordDraftSectionVersion.mockReset();
   });
 
   it("creates a suggestion with appended paragraph", async () => {
@@ -112,7 +123,23 @@ describe("draft suggestions helpers", () => {
       await callback({
         draftSection: prismaMock.draftSection,
         draftSuggestion: prismaMock.draftSuggestion,
-      });
+      } as unknown as Parameters<typeof callback>[0]);
+    });
+
+    prismaMock.draftSection.findUnique.mockResolvedValue({
+      id: "section-1",
+      projectId: "project-1",
+      content: {},
+      status: "draft",
+      version: 1,
+    });
+
+    prismaMock.draftSection.update.mockResolvedValue({
+      id: "section-1",
+      projectId: "project-1",
+      content: {},
+      status: "draft",
+      version: 2,
     });
 
     prismaMock.draftSuggestion.findUnique.mockResolvedValueOnce({
@@ -131,5 +158,7 @@ describe("draft suggestions helpers", () => {
     expect(logActivityMock).toHaveBeenCalledWith(expect.objectContaining({
       action: "draft.suggestion_accepted",
     }));
+    expect(versionsMock.ensureDraftSectionVersion).toHaveBeenCalled();
+    expect(versionsMock.recordDraftSectionVersion).toHaveBeenCalled();
   });
 });
