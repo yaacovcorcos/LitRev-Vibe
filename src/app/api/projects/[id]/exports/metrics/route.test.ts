@@ -37,7 +37,7 @@ describe("GET /api/projects/:id/exports/metrics", () => {
         discarded: 5,
         needs_review: 0,
       },
-      screened: 25,
+      screened: 20,
       included: 10,
       pending: 10,
       lastSearchCompletedAt: new Date("2024-01-01T00:00:00Z"),
@@ -54,7 +54,13 @@ describe("GET /api/projects/:id/exports/metrics", () => {
     const response = await GET(new Request("http://test.local"), params);
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json.metrics).toMatchObject({ totalIdentified: 50, screened: 25, included: 10 });
+    expect(json.metrics).toMatchObject({ totalIdentified: 50, screened: 20, included: 10 });
     expect(metricsMock).toHaveBeenCalledWith("project-1");
+  });
+
+  it("propagates metric calculation errors", async () => {
+    metricsMock.mockRejectedValueOnce(new Error("metrics failed"));
+
+    await expect(GET(new Request("http://test.local"), params)).rejects.toThrow("metrics failed");
   });
 });
