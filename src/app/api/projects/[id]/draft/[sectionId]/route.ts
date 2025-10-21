@@ -80,6 +80,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     return NextResponse.json(section);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "An unexpected error occurred";
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[draft:update]", error);
+    }
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
