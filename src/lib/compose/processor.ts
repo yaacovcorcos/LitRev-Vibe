@@ -2,6 +2,7 @@ import { Prisma } from "@/generated/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { prisma } from "@/lib/prisma";
 import { updateJobRecord } from "@/lib/jobs";
+import { toInputJson } from "@/lib/prisma/json";
 
 import { assertCitationsValid } from "./citation-validator";
 import { ensureDraftSectionVersion, recordDraftSectionVersion } from "./versions";
@@ -91,7 +92,7 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
           })
           : null;
 
-        const sanitizedContent = toJson(content);
+        const sanitizedContent = toInputJson(content);
 
         if (existing && existing.projectId !== projectId) {
           throw new Error(`Draft section ${existing.id} does not belong to project ${projectId}`);
@@ -414,11 +415,7 @@ function narrativeVoicePrefix(narrativeVoice: ComposeJobQueuePayload["narrativeV
 
 function primaryLocator(entry: LedgerEntryForCompose) {
   const locators = Array.isArray(entry.locators) ? entry.locators : [];
-  return locators.length > 0 ? toJson(locators[0]) : null;
-}
-
-function toJson<T>(value: T) {
-  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
+  return locators.length > 0 ? toInputJson(locators[0]) : null;
 }
 
 function cloneState(state: ComposeJobState) {

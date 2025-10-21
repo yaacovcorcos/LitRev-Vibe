@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const ingestIntegrityFeedsMock = vi.fn(
-  async ({ onCandidateUpdate }: { onCandidateUpdate?: () => void }) => {
+const ingestIntegrityFeedsMock = vi.hoisted(() =>
+  vi.fn(async ({ onCandidateUpdate }: { onCandidateUpdate?: () => void }) => {
     if (onCandidateUpdate) {
       onCandidateUpdate();
       onCandidateUpdate();
     }
-  },
+  }),
 );
 
 vi.mock("@/lib/queue/queue", () => ({

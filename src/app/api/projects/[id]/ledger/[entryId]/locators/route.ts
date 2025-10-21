@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
+import { toInputJson } from "@/lib/prisma/json";
 
 const locatorSchema = z
   .object({
@@ -61,10 +61,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const toJson = (value: unknown): Prisma.InputJsonValue => (
-    JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue
-  );
-
   const existingLocators = Array.isArray(entry.locators)
     ? (entry.locators as unknown[])
     : [];
@@ -73,7 +69,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const updated = await prisma.ledgerEntry.update({
     where: { id: entry.id },
     data: {
-      locators: toJson(updatedLocators),
+      locators: toInputJson(updatedLocators),
       verifiedByHuman: false,
     },
   });

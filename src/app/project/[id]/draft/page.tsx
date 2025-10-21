@@ -69,15 +69,19 @@ export default function DraftPage() {
     }
   }, [activeSectionId, firstSectionId]);
 
+  const selectedSectionId = activeSection?.id ?? null;
+  const selectedSectionVersion = activeSection?.version ?? null;
+  const selectedSectionContent = activeSection?.content ?? null;
+
   useEffect(() => {
-    if (!activeSection) {
+    if (!selectedSectionId) {
       setPendingContent(null);
       return;
     }
 
-    setPendingContent(activeSection.content);
+    setPendingContent(selectedSectionContent);
     setFeedbackMessage(null);
-  }, [activeSection]);
+  }, [selectedSectionId, selectedSectionVersion, selectedSectionContent]);
 
   const isApproved = activeSection?.status === "approved";
   const isUpdating = updateSection.isPending;

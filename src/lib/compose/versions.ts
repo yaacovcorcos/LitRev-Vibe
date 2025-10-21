@@ -1,6 +1,7 @@
 import type { Prisma, DraftSection, DraftSectionVersion } from "@/generated/prisma";
 
 import { prisma } from "@/lib/prisma";
+import { toInputJson } from "@/lib/prisma/json";
 
 type TransactionClient = Prisma.TransactionClient;
 
@@ -13,7 +14,7 @@ export async function recordDraftSectionVersion(
       draftSectionId: section.id,
       version: section.version,
       status: section.status,
-      content: section.content as Prisma.InputJsonValue,
+      content: toInputJson(section.content),
     },
   });
 }
@@ -85,7 +86,7 @@ export async function rollbackDraftSection(
     const updated = await tx.draftSection.update({
       where: { id: sectionId },
       data: {
-        content: snapshot.content as Prisma.InputJsonValue,
+        content: toInputJson(snapshot.content),
         status: snapshot.status,
         version: newVersionNumber,
       },

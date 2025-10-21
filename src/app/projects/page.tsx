@@ -9,6 +9,18 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 import { useCreateProject, useDeleteProject, useProjects } from "@/hooks/use-projects";
 
 export default function ProjectsPage() {
@@ -49,9 +61,6 @@ export default function ProjectsPage() {
   };
 
   const handleDelete = (projectId: string) => {
-    if (!window.confirm("Delete this project? This action cannot be undone.")) {
-      return;
-    }
     deleteProject.mutate(projectId);
   };
 
@@ -95,9 +104,8 @@ export default function ProjectsPage() {
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="project-name">Project name</Label>
-                <input
+                <Input
                   id="project-name"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={formState.name}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, name: event.target.value }))
@@ -198,16 +206,38 @@ export default function ProjectsPage() {
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/project/${project.id}/draft`}>Draft</Link>
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(project.id)}
-                          disabled={deleteProject.isPending}
-                        >
-                          <Trash className="h-4 w-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              disabled={deleteProject.isPending}
+                            >
+                              <Trash className="h-4 w-4" />
+                              <span className="sr-only">Delete project</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete project</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently remove the project, its plans, triage candidates, ledger entries, drafts, and jobs.
+                                This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(project.id)}
+                                disabled={deleteProject.isPending}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </li>

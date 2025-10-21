@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
+import { toInputJson, toNullableInputJson } from "@/lib/prisma/json";
 import { logActivity } from "@/lib/activity-log";
 
 const locatorSchema = z
@@ -63,10 +63,6 @@ function deriveCitationKey(candidate: { metadata: Record<string, unknown>; id: s
   return candidate.id;
 }
 
-function toJson(value: unknown): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
-}
-
 export async function POST(request: Request, { params }: RouteParams) {
   const candidate = await loadCandidate(params.id, params.candidateId);
   if (!candidate) {
@@ -87,14 +83,14 @@ export async function POST(request: Request, { params }: RouteParams) {
       projectId: candidate.projectId,
       candidateId: candidate.id,
       citationKey,
-      metadata: toJson(candidate.metadata),
-      provenance: toJson({
+      metadata: toInputJson(candidate.metadata),
+      provenance: toInputJson({
         source: "search-triage",
         searchAdapter: candidate.searchAdapter,
         externalIds: candidate.externalIds,
       }),
-      locators: toJson([parsed.data.locator]),
-      integrityNotes: candidate.integrityFlags ? toJson(candidate.integrityFlags) : Prisma.JsonNull,
+      locators: toInputJson([parsed.data.locator]),
+      integrityNotes: toNullableInputJson(candidate.integrityFlags),
       importedFrom: candidate.searchAdapter,
       keptAt: new Date(),
     },

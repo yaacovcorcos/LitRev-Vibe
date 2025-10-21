@@ -71,7 +71,7 @@ export function DraftEditor({
       return;
     }
 
-    editor.commands.setContent(nextContent);
+    editor.commands.setContent(nextContent, { emitUpdate: false });
   }, [editor, content]);
 
   if (!editor) {

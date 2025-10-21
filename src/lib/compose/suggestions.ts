@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { prisma } from "@/lib/prisma";
 import { ensureDraftSectionVersion, recordDraftSectionVersion } from "@/lib/compose/versions";
+import { toInputJson } from "@/lib/prisma/json";
 
 const suggestionInputSchema = z.object({
   projectId: z.string(),
@@ -80,8 +81,8 @@ export async function createDraftSuggestion(input: CreateSuggestionInput) {
       draftSectionId: section.id,
       suggestionType: data.suggestionType,
       summary: summaryBase,
-      diff: toJson(diffPayload),
-      content: toJson(updatedContent),
+      diff: toInputJson(diffPayload),
+      content: toInputJson(updatedContent),
     },
   });
 
@@ -160,7 +161,7 @@ export async function resolveDraftSuggestion(
       const updatedSection = await tx.draftSection.update({
         where: { id: suggestion.draftSectionId },
         data: {
-          content: suggestion.content as Prisma.InputJsonValue,
+          content: toInputJson(suggestion.content),
           version: section.version + 1,
           status: "draft",
         },
@@ -269,10 +270,6 @@ function appendParagraph(content: Prisma.JsonValue | null | undefined, paragraph
       },
     ],
   };
-}
-
-function toJson<T>(value: T): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
 }
 
 function asJsonObject(value: Prisma.JsonValue | null | undefined): Record<string, unknown> | null {
