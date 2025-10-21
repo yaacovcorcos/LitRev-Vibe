@@ -26,6 +26,14 @@ enum DraftSuggestionStatus {
   dismissed
 }
 
+enum ExportStatus {
+  pending
+  queued
+  in_progress
+  completed
+  failed
+}
+
 model Project {
   id          String   @id @default(cuid())
   name        String
@@ -190,19 +198,21 @@ model ActivityLog {
 }
 
 model Export {
-  id          String    @id @default(cuid())
+  id          String       @id @default(cuid())
   projectId   String
   format      String
   options     Json?
-  storagePath String?
+  storagePath String?      @map("filePath")
   storageUrl  String?
-  status      String    @default("pending")
+  status      ExportStatus @default(pending)
   error       Json?
   jobId       String?
-  createdAt   DateTime  @default(now())
-  createdBy   String?   @default("system")
+  createdAt   DateTime     @default(now())
+  createdBy   String?      @default("system")
   completedAt DateTime?
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   job     Job?    @relation(fields: [jobId], references: [id])
+
+  @@index([projectId], map: "Export_projectId_idx")
 }

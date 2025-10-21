@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { toInputJson } from "@/lib/prisma/json";
 import {
@@ -67,19 +68,21 @@ export async function PUT(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const baseSettings = normalizeProjectSettings(existing.settings);
-  const mergedSettings = parsed.data.settings
-    ? resolveProjectSettings(parsed.data.settings, baseSettings)
-    : baseSettings;
+  const updateData: Prisma.ProjectUpdateInput = {
+    name: parsed.data.name,
+    description: parsed.data.description ?? null,
+  };
+
+  if (parsed.data.settings !== undefined) {
+    const baseSettings = normalizeProjectSettings(existing.settings);
+    const mergedSettings = resolveProjectSettings(parsed.data.settings, baseSettings);
+    updateData.settings = toInputJson(mergedSettings);
+  }
 
   try {
     const project = await prisma.project.update({
       where: { id: params.id },
-      data: {
-        name: parsed.data.name,
-        description: parsed.data.description ?? null,
-        settings: toInputJson(mergedSettings),
-      },
+      data: updateData,
     });
 
     return NextResponse.json(serializeProject(project));
