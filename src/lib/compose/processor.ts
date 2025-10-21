@@ -274,8 +274,17 @@ export function calculateProgress(state: ComposeJobState, totalSections: number)
   }
 
   const completed = state.sections.filter((section) => section.status === "completed").length;
-  const running = state.sections.some((section) => section.status === "running") ? 0.4 : 0;
-  return Math.min(1, (completed + running) / totalSections);
+  const runningCount = state.sections.filter((section) => section.status === "running").length;
+  const pendingCount = state.sections.filter((section) => section.status === "pending").length;
+
+  const runningContribution = runningCount > 0 ? runningCount * 0.5 : 0;
+  const baseProgress = (completed + runningContribution) / totalSections;
+
+  if (pendingCount === totalSections && runningCount === 0) {
+    return 0;
+  }
+
+  return Math.min(1, baseProgress);
 }
 
 function fallbackSectionKey(sectionType: string, index: number) {

@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { EventEmitter } from 'events';
 
 let client: Redis | null = null;
 
@@ -14,11 +15,17 @@ export function createRedisConnection(): Redis {
   }
 
   if (process.env.MOCK_REDIS === '1') {
-    const mock = {
-      on: () => mock,
-      quit: async () => undefined,
-    } as unknown as Redis;
+    class MockRedis extends EventEmitter {
+      duplicate() {
+        return this;
+      }
 
+      async quit() {
+        return undefined;
+      }
+    }
+
+    const mock = new MockRedis() as unknown as Redis;
     client = mock;
     return mock;
   }

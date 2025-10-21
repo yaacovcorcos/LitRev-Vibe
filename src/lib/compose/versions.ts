@@ -18,7 +18,7 @@ export async function recordDraftSectionVersion(
   });
 }
 
-export async function ensureDraftSectionVersionSnapshot(
+export async function ensureDraftSectionVersion(
   client: TransactionClient,
   section: Pick<DraftSection, "id" | "version" | "status" | "content">,
 ) {
@@ -35,6 +35,8 @@ export async function ensureDraftSectionVersionSnapshot(
     await recordDraftSectionVersion(client, section);
   }
 }
+
+export { ensureDraftSectionVersion as ensureDraftSectionVersionSnapshot };
 
 export async function listDraftSectionVersions(projectId: string, sectionId: string) {
   const section = await prisma.draftSection.findFirst({
