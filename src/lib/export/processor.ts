@@ -1,3 +1,5 @@
+import JSZip from "jszip";
+
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
@@ -5,8 +7,10 @@ import { updateJobRecord } from "@/lib/jobs";
 import { toInputJson } from "@/lib/prisma/json";
 import { buildExportContext } from "@/lib/export/context";
 import { getExportAdapter } from "@/lib/export/adapters";
+import type { ExportArtifact } from "@/lib/export/storage";
 import { storeExportArtifact } from "@/lib/export/storage";
 import { exportJobQueueSchema, type ExportJobQueuePayload } from "@/lib/export/jobs";
+import { buildPrismaDiagramSvg } from "@/lib/export/prisma-diagram";
 
 export async function processExportJob(data: unknown) {
   const payload = exportJobQueueSchema.parse(data);
@@ -33,12 +37,23 @@ export async function processExportJob(data: unknown) {
       throw new Error(`No export adapter registered for format ${payload.format}`);
     }
 
-    const artifact = await adapter.generate(context, {
+    const primaryArtifact = await adapter.generate(context, {
       includePrismaDiagram: payload.includePrismaDiagram,
       includeLedger: payload.includeLedger,
     });
 
-    const stored = await storeExportArtifact(payload.projectId, payload.exportId, artifact);
+    const bundle = await buildExportArchive({
+      context,
+      payload,
+      primaryArtifact,
+    });
+
+    const stored = await storeExportArtifact(payload.projectId, payload.exportId, {
+      data: bundle.buffer,
+      extension: "zip",
+      contentType: "application/zip",
+      filename: `${payload.exportId}.zip`,
+    });
 
     await prisma.export.update({
       where: { id: payload.exportId },
@@ -48,6 +63,9 @@ export async function processExportJob(data: unknown) {
         storageUrl: stored.storageUrl,
         completedAt: new Date(),
         error: Prisma.JsonNull,
+        options: toInputJson({
+          ...(bundle.manifest ?? {}),
+        }),
       },
     });
 
@@ -60,6 +78,7 @@ export async function processExportJob(data: unknown) {
         includePrismaDiagram: payload.includePrismaDiagram,
         includeLedger: payload.includeLedger,
         storagePath: stored.storagePath,
+        manifest: bundle.manifest,
       },
       completedAt: new Date(),
     }).catch(() => undefined);
@@ -112,4 +131,97 @@ export async function processExportJob(data: unknown) {
 
     throw error;
   }
+}
+
+type BuildArchiveInput = {
+  context: Awaited<ReturnType<typeof buildExportContext>>;
+  payload: ExportJobQueuePayload;
+  primaryArtifact: ExportArtifact;
+};
+
+type ArchiveManifest = {
+  format: string;
+  generatedAt: string;
+  includeLedger: boolean;
+  includePrismaDiagram: boolean;
+  files: Array<{ name: string; contentType: string }>;
+};
+
+export async function buildExportArchive({ context, payload, primaryArtifact }: BuildArchiveInput) {
+  const zip = new JSZip();
+  const files: Array<{ name: string; contentType: string; data: Buffer }> = [];
+
+  const primaryName = filenameForFormat(payload.format, primaryArtifact.extension ?? payload.format);
+  files.push({
+    name: `manuscript/${primaryName}`,
+    contentType: primaryArtifact.contentType,
+    data: toBuffer(primaryArtifact.data),
+  });
+
+  if (payload.includeLedger) {
+    const bibAdapter = getExportAdapter("bibtex");
+    if (bibAdapter) {
+      const bibliography = await bibAdapter.generate(context, {
+        includeLedger: true,
+        includePrismaDiagram: payload.includePrismaDiagram,
+      });
+      files.push({
+        name: `attachments/bibliography.${bibliography.extension ?? "bib"}`,
+        contentType: bibliography.contentType,
+        data: toBuffer(bibliography.data),
+      });
+    }
+  }
+
+  if (payload.includePrismaDiagram) {
+    const svg = buildPrismaDiagramSvg(context.metrics);
+    files.push({
+      name: "attachments/prisma-diagram.svg",
+      contentType: "image/svg+xml",
+      data: Buffer.from(svg, "utf-8"),
+    });
+  }
+
+  const manifest: ArchiveManifest = {
+    format: payload.format,
+    generatedAt: context.generatedAt.toISOString(),
+    includeLedger: payload.includeLedger,
+    includePrismaDiagram: payload.includePrismaDiagram,
+    files: files.map((file) => ({ name: file.name, contentType: file.contentType })),
+  };
+
+  zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+  files.forEach((file) => {
+    zip.file(file.name, file.data, {
+      binary: true,
+    });
+  });
+
+  const buffer = await zip.generateAsync({ type: "nodebuffer" });
+
+  return {
+    buffer,
+    manifest,
+  };
+}
+
+function filenameForFormat(format: string, extension: string) {
+  switch (format) {
+    case "docx":
+      return `manuscript.${extension}`;
+    case "markdown":
+      return `manuscript.${extension}`;
+    case "bibtex":
+      return `bibliography.${extension}`;
+    default:
+      return `export.${extension}`;
+  }
+}
+
+function toBuffer(data: Buffer | Uint8Array | string) {
+  if (typeof data === "string") {
+    return Buffer.from(data, "utf-8");
+  }
+
+  return Buffer.from(data);
 }
