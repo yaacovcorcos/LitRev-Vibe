@@ -71,9 +71,7 @@ export function DraftEditor({
       return;
     }
 
-    editor.commands.setContent(nextContent, false, {
-      preserveWhitespace: "full",
-    });
+    editor.commands.setContent(nextContent, { emitUpdate: false });
   }, [editor, content]);
 
   if (!editor) {
@@ -90,12 +88,24 @@ export function DraftEditor({
   );
 }
 
+type ToolbarItem = {
+  label: string;
+  action: () => boolean;
+  isActive: () => boolean;
+  disabled?: () => boolean;
+};
+
+type ToolbarGroup = {
+  label: string;
+  items: ToolbarItem[];
+};
+
 type EditorToolbarProps = {
   editor: Editor;
 };
 
 function EditorToolbar({ editor }: EditorToolbarProps) {
-  const groups = useMemo(
+  const groups: ToolbarGroup[] = useMemo(
     () => [
       {
         label: "Formatting",
@@ -123,7 +133,7 @@ function EditorToolbar({ editor }: EditorToolbarProps) {
         <div key={group.label} className="flex items-center gap-1" aria-label={group.label}>
           {group.items.map((item) => {
             const active = item.isActive();
-            const disabled = item.disabled ? item.disabled() : false;
+            const disabled = item.disabled?.() ?? false;
             return (
               <button
                 key={item.label}

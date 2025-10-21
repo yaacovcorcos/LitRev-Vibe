@@ -15,9 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAddLocator, useLedgerEntries, useVerifyLocator, type LedgerEntry } from "@/hooks/use-ledger";
 import { useProject } from "@/hooks/use-projects";
-import { determineLocatorStatus, getLocatorStatusDisplay, type LocatorStatus } from "@/lib/ledger/status";
+import { determineLocatorStatus, getLocatorStatusDisplay, type LocatorStatus, type LocatorStatusTone } from "@/lib/ledger/status";
 import { cn } from "@/lib/utils";
-import { LocatorBanner } from "@/components/ledger/locator-banner";
 
 const pageSize = 20;
 
@@ -93,6 +92,8 @@ export default function LedgerPage() {
       paragraph?: number;
       sentence?: number;
       note?: string;
+      quote?: string;
+      source?: string;
     } = {};
 
     const parseIntegerField = (value: string, label: string) => {
@@ -641,32 +642,38 @@ function parseIntegrityNotes(value: unknown): IntegrityFlag[] {
     return [];
   }
 
-  return value
-    .map((item) => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) {
-        return null;
-      }
+  const flags: IntegrityFlag[] = [];
 
-      const record = item as Record<string, unknown>;
-      const label = typeof record.label === "string" ? record.label : null;
-      const severityRaw = typeof record.severity === "string" ? record.severity : null;
-      const source = typeof record.source === "string" ? record.source : "unknown";
-      const reason = typeof record.reason === "string" ? record.reason : undefined;
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      continue;
+    }
 
-      if (!label || !severityRaw) {
-        return null;
-      }
+    const record = item as Record<string, unknown>;
+    const label = typeof record.label === "string" ? record.label : null;
+    const severityRaw = typeof record.severity === "string" ? record.severity : null;
 
-      const severity = severityRaw === "critical" || severityRaw === "warning" ? severityRaw : "info";
+    if (!label || !severityRaw) {
+      continue;
+    }
 
-      return {
-        label,
-        severity,
-        source,
-        reason,
-      } satisfies IntegrityFlag;
-    })
-    .filter((flag): flag is IntegrityFlag => flag !== null);
+    const severity: IntegrityFlag["severity"] =
+      severityRaw === "critical" || severityRaw === "warning" ? severityRaw : "info";
+    const source = typeof record.source === "string" ? record.source : "unknown";
+    const flag: IntegrityFlag = {
+      label,
+      severity,
+      source,
+    };
+
+    if (typeof record.reason === "string" && record.reason.trim()) {
+      flag.reason = record.reason;
+    }
+
+    flags.push(flag);
+  }
+
+  return flags;
 }
 
 type LocatorFieldProps = {

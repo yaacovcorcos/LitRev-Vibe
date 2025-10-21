@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { toInputJson, toNullableInputJson } from "@/lib/prisma/json";
 import { logActivity } from "@/lib/activity-log";
 
 const locatorSchema = z
@@ -26,7 +27,7 @@ const locatorSchema = z
   );
 
 const keepSchema = z.object({
-    locator: locatorSchema,
+  locator: locatorSchema,
 });
 
 type RouteParams = {
@@ -82,17 +83,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       projectId: candidate.projectId,
       candidateId: candidate.id,
       citationKey,
-      metadata: candidate.metadata as Record<string, unknown>,
-      provenance: {
+      metadata: toInputJson(candidate.metadata),
+      provenance: toInputJson({
         source: "search-triage",
         searchAdapter: candidate.searchAdapter,
         externalIds: candidate.externalIds,
-      },
-      locators: [parsed.data.locator],
-      integrityNotes: candidate.integrityFlags as Record<string, unknown> | null,
+      }),
+      locators: toInputJson([parsed.data.locator]),
+      integrityNotes: toNullableInputJson(candidate.integrityFlags),
       importedFrom: candidate.searchAdapter,
       keptAt: new Date(),
-      },
+    },
   });
 
   await prisma.candidate.update({

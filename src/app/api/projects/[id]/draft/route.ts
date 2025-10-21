@@ -20,9 +20,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   const sections = await prisma.draftSection.findMany({
     where: { projectId: project.id },
-    orderBy: [
-      { createdAt: "asc" },
-    ],
+    orderBy: [{ createdAt: "asc" }],
     include: {
       citations: {
         include: {

@@ -3,6 +3,7 @@ import path from "path";
 
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
+import { toNullableInputJson } from "@/lib/prisma/json";
 
 export type IntegrityFlag = {
   label: string;
@@ -62,7 +63,7 @@ export async function applyIntegrityFlags(updates: CandidateIntegrityUpdate[], o
       prisma.candidate.update({
         where: { id: update.candidateId },
         data: {
-          integrityFlags: (update.flags as unknown) as Prisma.JsonValue,
+          integrityFlags: toNullableInputJson(update.flags),
         },
       }).then(() => {
         onUpdate?.();

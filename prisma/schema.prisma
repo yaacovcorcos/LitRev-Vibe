@@ -38,6 +38,7 @@ model Project {
   candidates    Candidate[]
   ledgerEntries LedgerEntry[]
   draftSections DraftSection[]
+  draftSuggestions DraftSuggestion[]
   jobs          Job[]
   activityLog   ActivityLog[]
   exports       Export[]

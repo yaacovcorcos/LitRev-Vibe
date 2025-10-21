@@ -82,6 +82,7 @@ describe("Draft suggestion list & create API", () => {
     expect(suggestionsMock.createDraftSuggestion).toHaveBeenCalledWith({
       projectId: "project-1",
       draftSectionId: "section-1",
+      suggestionType: "improvement",
     });
   });
 
