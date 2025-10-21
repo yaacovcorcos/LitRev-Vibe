@@ -7,6 +7,8 @@ import { processSearchJob } from "@/lib/search/jobs";
 import { processTriageRationaleJob } from "@/lib/ai/jobs";
 import { processIntegrityIngestionJob } from "@/lib/integrity/jobs";
 import { processSnippetExtractionJob } from "@/lib/snippets/jobs";
+import { EXPORT_QUEUE_JOB_NAME } from "@/lib/export/jobs";
+import { processExportJob } from "@/lib/export/processor";
 import { queues } from "./queue";
 import { createRedisConnection } from "./redis";
 
@@ -33,6 +35,8 @@ export const defaultWorker = new Worker(
         return processSnippetExtractionJob(job.data);
       case COMPOSE_QUEUE_JOB_NAME:
         return processComposeJob(job.data);
+      case EXPORT_QUEUE_JOB_NAME:
+        return processExportJob(job.data);
       default:
         logger.warn({ jobName: job.name }, 'Unhandled job type, echoing payload');
         return job.data;
