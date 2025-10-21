@@ -1,6 +1,3 @@
-process.env.REDIS_URL = "redis://localhost:0";
-process.env.MOCK_REDIS = "1";
-
 import { expect, test } from "@playwright/test";
 
 import {
