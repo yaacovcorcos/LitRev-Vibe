@@ -71,17 +71,15 @@ export default function DraftPage() {
 
   const selectedSectionId = activeSection?.id ?? null;
   const selectedSectionVersion = activeSection?.version ?? null;
-  const selectedSectionContent = activeSection?.content ?? null;
-
   useEffect(() => {
     if (!selectedSectionId) {
       setPendingContent(null);
       return;
     }
 
-    setPendingContent(selectedSectionContent);
+    setPendingContent(activeSection?.content ?? null);
     setFeedbackMessage(null);
-  }, [selectedSectionId, selectedSectionVersion, selectedSectionContent]);
+  }, [selectedSectionId, selectedSectionVersion, activeSection?.content]);
 
   const isApproved = activeSection?.status === "approved";
   const isUpdating = updateSection.isPending;
