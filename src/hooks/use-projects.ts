@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import type { ProjectSettings, ProjectSettingsPatch } from "@/lib/projects/settings";
+
 type Project = {
   id: string;
   name: string;
   description: string | null;
   createdAt: string;
   updatedAt: string;
+  settings: ProjectSettings;
 };
 
 const projectKeys = {
@@ -35,6 +39,7 @@ async function fetchProject(id: string): Promise<Project> {
 type ProjectInput = {
   name: string;
   description?: string | null;
+  settings?: ProjectSettingsPatch;
 };
 
 export function useProjects() {

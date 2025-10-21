@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { SearchQuery } from "@/lib/search";
+import type { TriageStatus } from "@/lib/triage/status";
 
 export const candidateKeys = {
   base: "candidates" as const,
@@ -19,7 +20,7 @@ export type Candidate = {
   integrityFlags?: unknown;
   aiRationale?: Record<string, unknown> | null;
   locatorSnippets?: unknown;
-  triageStatus: string;
+  triageStatus: TriageStatus;
   createdAt: string;
 };
 

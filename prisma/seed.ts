@@ -1,5 +1,7 @@
 import { PrismaClient } from '../src/generated/prisma';
 
+import { DEFAULT_PROJECT_SETTINGS } from '../src/lib/projects/settings';
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -10,10 +12,7 @@ async function main() {
       id: 'demo-project',
       name: 'Demo Medical Review',
       description: 'Seed project for development and testing.',
-      settings: {
-        locatorPolicy: 'strict',
-        citationStyle: 'apa',
-      },
+      settings: DEFAULT_PROJECT_SETTINGS,
       researchPlans: {
         create: {
           scope: { population: 'Adults with hypertension', intervention: 'Lifestyle modifications' },

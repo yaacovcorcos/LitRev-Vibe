@@ -26,6 +26,14 @@ enum DraftSuggestionStatus {
   dismissed
 }
 
+enum ExportStatus {
+  pending
+  queued
+  in_progress
+  completed
+  failed
+}
+
 model Project {
   id          String   @id @default(cuid())
   name        String
@@ -34,14 +42,14 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  researchPlans ResearchPlan[]
-  candidates    Candidate[]
-  ledgerEntries LedgerEntry[]
-  draftSections DraftSection[]
+  researchPlans    ResearchPlan[]
+  candidates       Candidate[]
+  ledgerEntries    LedgerEntry[]
+  draftSections    DraftSection[]
   draftSuggestions DraftSuggestion[]
-  jobs          Job[]
-  activityLog   ActivityLog[]
-  exports       Export[]
+  jobs             Job[]
+  activityLog      ActivityLog[]
+  exports          Export[]
 }
 
 model ResearchPlan {
@@ -107,10 +115,10 @@ model DraftSection {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  project   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  citations DraftSectionOnLedger[]
+  project     Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  citations   DraftSectionOnLedger[]
   suggestions DraftSuggestion[]
-  versions  DraftSectionVersion[]
+  versions    DraftSectionVersion[]
 }
 
 model DraftSectionOnLedger {
@@ -126,16 +134,16 @@ model DraftSectionOnLedger {
 }
 
 model DraftSuggestion {
-  id             String   @id @default(cuid())
+  id             String                @id @default(cuid())
   projectId      String
   draftSectionId String
-  suggestionType DraftSuggestionType @default(improvement)
+  suggestionType DraftSuggestionType   @default(improvement)
   summary        String?
   diff           Json
   content        Json?
   status         DraftSuggestionStatus @default(pending)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
   resolvedAt     DateTime?
   resolvedBy     String?
 
@@ -190,15 +198,21 @@ model ActivityLog {
 }
 
 model Export {
-  id        String   @id @default(cuid())
-  projectId String
-  format    String
-  options   Json?
-  filePath  String?
-  jobId     String?
-  createdAt DateTime @default(now())
-  createdBy String?  @default("system")
+  id          String       @id @default(cuid())
+  projectId   String
+  format      String
+  options     Json?
+  storagePath String?      @map("filePath")
+  storageUrl  String?
+  status      ExportStatus @default(pending)
+  error       Json?
+  jobId       String?
+  createdAt   DateTime     @default(now())
+  createdBy   String?      @default("system")
+  completedAt DateTime?
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   job     Job?    @relation(fields: [jobId], references: [id])
+
+  @@index([projectId], map: "Export_projectId_idx")
 }
