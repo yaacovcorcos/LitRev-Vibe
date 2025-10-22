@@ -21,6 +21,7 @@ export default defineConfig({
       use: { browserName: "chromium" },
     },
   ],
+  workers: process.platform === "win32" ? 1 : undefined,
   webServer: {
     command: `pnpm exec next dev --hostname ${HOST} --port ${PORT}`,
     cwd: ".",

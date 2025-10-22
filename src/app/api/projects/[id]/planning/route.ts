@@ -112,13 +112,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     response.status = existingPlan.status;
   }
 
-  const changedFields: string[] = [];
-  if (planInput.scope !== undefined) changedFields.push("scope");
-  if (planInput.questions !== undefined) changedFields.push("questions");
-  if (planInput.queryStrategy !== undefined) changedFields.push("queryStrategy");
-  if (planInput.outline !== undefined) changedFields.push("outline");
-  if (planInput.targetSources !== undefined) changedFields.push("targetSources");
-  if (planInput.status !== undefined) changedFields.push("status");
+  const changedFields = Object.keys(planInput);
 
   await logActivity({
     projectId: params.id,

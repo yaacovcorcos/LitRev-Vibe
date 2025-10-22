@@ -31,8 +31,8 @@ const planningFixture = {
     "1. Introduction\n   - Burden of hypertension\n   - Rationale for lifestyle-focused management\n2. Methods\n   - Research questions & scope\n   - Search strategy & selection criteria\n3. Results\n   - Diet interventions\n   - Exercise programs\n   - Combined lifestyle programs\n4. Discussion\n   - Adherence strategies\n   - Comparative effectiveness vs pharmacotherapy\n   - Research gaps",
   targetSources: ["pubmed", "crossref"],
   status: "draft",
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
+  createdAt: "2025-10-22T10:00:00.000Z",
+  updatedAt: "2025-10-22T10:00:00.000Z",
 };
 
 async function stubProjectEndpoints(page: Parameters<typeof test>[0]["page"]) {
@@ -52,8 +52,24 @@ async function stubProjectEndpoints(page: Parameters<typeof test>[0]["page"]) {
 
   await page.route("**/api/trpc/project.byId*", async (route) => {
     const request = route.request();
-    const body = request.postDataJSON() as { input?: { id?: string } };
-    const project = projectsFixture.find((entry) => entry.id === body?.input?.id);
+    let projectId: string | undefined;
+
+    if (request.method() === "GET") {
+      const url = new URL(request.url());
+      const inputParam = url.searchParams.get("input");
+      if (inputParam) {
+        const input = JSON.parse(inputParam) as Record<string, unknown>;
+        projectId = typeof input["0"] === "string" ? input["0"] : undefined;
+      }
+    } else {
+      const body = await request.postDataJSON();
+      if (body) {
+        const parsed = body as Record<string, unknown>;
+        projectId = typeof parsed["0"] === "string" ? parsed["0"] : undefined;
+      }
+    }
+
+    const project = projectsFixture.find((entry) => entry.id === projectId);
 
     await route.fulfill({
       status: 200,
@@ -77,7 +93,10 @@ async function stubProjectEndpoints(page: Parameters<typeof test>[0]["page"]) {
   });
 }
 
-test.describe("Design QA snapshots", () => {
+const isMac = process.platform === "darwin";
+
+test.describe('Design QA snapshots', () => {
+  test.skip(!isMac, "Visual baselines currently tracked for macOS only");
 test("home page matches baseline @visual", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
