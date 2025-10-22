@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { PlanningSection } from "@/components/planning/section";
+import { GeneratedPlanPreview } from "@/components/planning/generated-plan-preview";
 import { useProject } from "@/hooks/use-projects";
 import {
   useResearchPlan,
@@ -253,55 +254,12 @@ export default function PlanningPage() {
       <Separator />
 
       {generatedPlan ? (
-        <section className="space-y-4 rounded-lg border bg-background p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">AI-generated suggestion</h2>
-              {generatedPlan.rationale ? (
-                <p className="mt-1 text-sm text-muted-foreground">{generatedPlan.rationale}</p>
-              ) : null}
-              {generatedPlan.targetSources.length > 0 ? (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Suggested sources: {generatedPlan.targetSources.join(", ")}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <Button variant="default" onClick={handleApplyGeneratedPlan}>
-                Apply to form
-              </Button>
-              <Button variant="ghost" onClick={() => setGeneratedPlan(null)}>
-                Dismiss
-              </Button>
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Scope & PICO
-              </Label>
-              <Textarea value={generatedPlan.scope} readOnly className="min-h-[160px] bg-muted/40 font-mono text-sm" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Key Questions
-              </Label>
-              <Textarea value={generatedPlan.questions} readOnly className="min-h-[160px] bg-muted/40 font-mono text-sm" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Query Strategy
-              </Label>
-              <Textarea value={generatedPlan.queryStrategy} readOnly className="min-h-[160px] bg-muted/40 font-mono text-sm" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Draft Outline
-              </Label>
-              <Textarea value={generatedPlan.outline} readOnly className="min-h-[160px] bg-muted/40 font-mono text-sm" />
-            </div>
-          </div>
-        </section>
+        <GeneratedPlanPreview
+          plan={generatedPlan}
+          onApply={handleApplyGeneratedPlan}
+          onDismiss={() => setGeneratedPlan(null)}
+          disabled={isGenerating}
+        />
       ) : null}
 
       <section className="grid gap-6 md:grid-cols-2">

@@ -111,8 +111,16 @@ function normalizeQueryStrategy(value: ModelJsonShape["queryStrategy"]): string 
   return parts.join("\n\n");
 }
 
-function normalizeOutline(value: ModelJsonShape["outline"]): string {
-  if (!value || value.length === 0) {
+function normalizeOutline(value: ModelJsonShape["outline"] | string | undefined): string {
+  if (!value || (Array.isArray(value) && value.length === 0)) {
+    return DEFAULT_PLAN.outline;
+  }
+
+  if (typeof value === "string") {
+    return value.trim().length > 0 ? value : DEFAULT_PLAN.outline;
+  }
+
+  if (!Array.isArray(value)) {
     return DEFAULT_PLAN.outline;
   }
 

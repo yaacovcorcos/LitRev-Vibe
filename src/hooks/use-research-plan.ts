@@ -140,7 +140,22 @@ export function useGenerateResearchPlan(projectId: string | null) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate plan suggestions");
+        let message = "Failed to generate plan suggestions";
+        try {
+          const body = await response.json();
+          if (typeof body?.error === "string") {
+            message = body.error;
+          } else if (body?.error?.message) {
+            message = body.error.message;
+          }
+        } catch (error) {
+          console.error("useGenerateResearchPlan: unable to parse error response", error);
+        }
+        console.error("useGenerateResearchPlan: generation request failed", {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        throw new Error(message);
       }
 
       const data = (await response.json()) as { plan: GeneratedPlanSuggestion };
