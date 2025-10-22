@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import { Bell, Command, Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CommandMenu } from "./command-menu";
 
-export function Header() {
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+type HeaderProps = {
+  onToggleMobileNav?: () => void;
+  isMobileNavOpen?: boolean;
+};
 
+export function Header({
+  onToggleMobileNav,
+  isMobileNavOpen = false,
+}: HeaderProps) {
   return (
     <header className="flex h-16 items-center border-b bg-background px-4 lg:px-6">
       <div className="flex flex-1 items-center gap-2">
@@ -17,8 +22,10 @@ export function Header() {
           variant="ghost"
           size="icon"
           className="lg:hidden"
-          onClick={() => setIsMobileNavOpen((prev) => !prev)}
           aria-label="Toggle navigation"
+          aria-expanded={isMobileNavOpen}
+          aria-controls="mobile-navigation"
+          onClick={() => onToggleMobileNav?.()}
         >
           <Menu className="h-5 w-5" />
         </Button>
