@@ -13,8 +13,15 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import type { NavItem, NavSection } from "@/lib/navigation";
-import { workspaceNav } from "@/lib/navigation";
+import {
+  extractProjectId,
+  isActiveNavPath,
+  navItemRequiresProject,
+  resolveProjectHref,
+  workspaceNav,
+  type NavItem,
+  type NavSection,
+} from "@/lib/navigation";
 
 type PaletteItem = {
   id: string;
@@ -128,11 +135,8 @@ function flattenNav(
 ): PaletteItem[] {
   return sections.flatMap((section) =>
     section.items.map((item) => {
-      const requiresProject = item.href.includes("/:id");
-      const resolvedHref = requiresProject
-        ? resolveProjectHref(item.href, activeProjectId)
-        : item.href;
-
+      const requiresProject = navItemRequiresProject(item);
+      const resolvedHref = resolveProjectHref(item.href, activeProjectId);
       const href = resolvedHref ?? item.href;
 
       return {
@@ -143,7 +147,7 @@ function flattenNav(
         icon: item.icon,
         description: item.description,
         disabled: requiresProject && !resolvedHref,
-        isActive: Boolean(pathname && resolvedHref && isActivePath(pathname, href)),
+        isActive: Boolean(pathname && resolvedHref && isActiveNavPath(pathname, href)),
       };
     }),
   );
@@ -163,29 +167,4 @@ function groupBySection(items: PaletteItem[]) {
     section,
     items: sectionItems,
   }));
-}
-
-function resolveProjectHref(href: string, projectId: string | null) {
-  if (!projectId) {
-    return null;
-  }
-
-  return href.replace("/:id", `/${projectId}`);
-}
-
-function extractProjectId(pathname: string | null) {
-  if (!pathname) {
-    return null;
-  }
-
-  const match = pathname.match(/\/project\/([^/]+)/);
-  return match ? match[1] : null;
-}
-
-function isActivePath(pathname: string, target: string) {
-  if (target === "/") {
-    return pathname === "/";
-  }
-
-  return pathname === target || pathname.startsWith(`${target}/`);
 }

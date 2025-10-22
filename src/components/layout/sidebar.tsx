@@ -4,7 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { workspaceNav } from "@/lib/navigation";
+import {
+  extractProjectId,
+  isActiveNavPath,
+  navItemRequiresProject,
+  resolveProjectHref,
+  workspaceNav,
+} from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 type SidebarProps = {
@@ -20,6 +26,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const isMobile = variant === "mobile";
+  const projectId = extractProjectId(pathname);
 
   return (
     <aside
@@ -46,8 +53,34 @@ export function Sidebar({
             </p>
             <div className="space-y-1">
               {section.items.map((item) => {
-                const isActive = matchPath(pathname, item.href);
+                const resolvedHref = resolveProjectHref(item.href, projectId);
+                const requiresProject = navItemRequiresProject(item);
+                const isDisabled = requiresProject && !resolvedHref;
+                const href = resolvedHref ?? item.href;
+                const isActive = resolvedHref
+                  ? isActiveNavPath(pathname, resolvedHref)
+                  : !requiresProject && isActiveNavPath(pathname, item.href);
                 const Icon = item.icon;
+                const content = (
+                  <>
+                    <Icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </>
+                );
+
+                if (isDisabled) {
+                  return (
+                    <Button
+                      key={item.href}
+                      variant="ghost"
+                      className={cn("w-full justify-start gap-3 px-3 text-sm font-medium")}
+                      disabled
+                      aria-disabled="true"
+                    >
+                      {content}
+                    </Button>
+                  );
+                }
 
                 return (
                   <Button
@@ -60,10 +93,7 @@ export function Sidebar({
                     )}
                     onClick={onNavigate}
                   >
-                    <Link href={item.href}>
-                      <Icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
+                    <Link href={href}>{content}</Link>
                   </Button>
                 );
               })}
@@ -77,13 +107,4 @@ export function Sidebar({
       </div>
     </aside>
   );
-}
-
-function matchPath(pathname: string, href: string) {
-  if (href.includes('/:id')) {
-    const base = href.split('/:id')[0];
-    return pathname.startsWith(base);
-  }
-
-  return pathname === href;
 }
