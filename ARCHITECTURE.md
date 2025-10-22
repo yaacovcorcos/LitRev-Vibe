@@ -16,6 +16,7 @@
 - **Activity Timeline (`src/app/project/[id]/activity`)**: Timeline view of project events backed by React Query hooks and shadcn UI cards.
 - **Triage Workspace (`src/app/project/[id]/triage`)**: Candidate search/triage UI wired to search jobs and React Query hooks.
 - **Evidence Ledger (`src/app/project/[id]/ledger`)**: Vetted reference workspace with inspector for metadata, locators, and integrity signals.
+- **Notifications Workspace (`src/app/notifications`)**: Placeholder page outlining upcoming alert feeds and linking to runs/activity surfaces; prevents navigation dead-ends until real notifications ship.
 - **Automation Scripts (`scripts/`)**: `agent-verify.sh` guardrails, additional automation will live here.
 
 ## Data Flow (Current)
