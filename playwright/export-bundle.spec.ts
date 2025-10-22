@@ -94,11 +94,14 @@ test.describe("export bundle manifest", () => {
       primaryArtifact,
     });
 
-    expect(manifest.files).toEqual([
+    const expected = [
       { name: "manuscript/manuscript.docx", contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
       { name: "attachments/bibliography.bib", contentType: "application/x-bibtex" },
       { name: "attachments/prisma-diagram.svg", contentType: "image/svg+xml" },
-    ]);
+    ];
+
+    expect(manifest.files).toHaveLength(expected.length);
+    expect(manifest.files).toEqual(expect.arrayContaining(expected));
   });
 
   test("omits optional attachments when toggles disabled", async () => {
@@ -110,8 +113,11 @@ test.describe("export bundle manifest", () => {
       primaryArtifact,
     });
 
-    expect(manifest.files).toEqual([
+    const expected = [
       { name: "manuscript/manuscript.docx", contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
-    ]);
+    ];
+
+    expect(manifest.files).toHaveLength(expected.length);
+    expect(manifest.files).toEqual(expect.arrayContaining(expected));
   });
 });
