@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { Folder, Loader2, PlusCircle, Trash } from "lucide-react";
 
@@ -21,11 +21,18 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { useCreateProject, useDeleteProject, useProjects } from "@/hooks/use-projects";
+import {
+  useCreateProject,
+  useDeleteProject,
+  useProjects,
+  useUpdateProject,
+  type Project,
+} from "@/hooks/use-projects";
 
 export default function ProjectsPage() {
   const { data: projects, isLoading, isError, refetch } = useProjects();
   const createProject = useCreateProject();
+  const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
 
   const [formState, setFormState] = useState({
@@ -33,6 +40,9 @@ export default function ProjectsPage() {
     description: "",
   });
   const [formError, setFormError] = useState<string | null>(null);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editFormState, setEditFormState] = useState({ name: "", description: "" });
+  const [editError, setEditError] = useState<string | null>(null);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -61,8 +71,58 @@ export default function ProjectsPage() {
   };
 
   const handleDelete = (projectId: string) => {
-    deleteProject.mutate(projectId);
+    deleteProject.mutate({ id: projectId });
   };
+
+  const startEdit = (project: Project) => {
+    setEditingProjectId(project.id);
+    setEditFormState({
+      name: project.name,
+      description: project.description ?? "",
+    });
+    setEditError(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingProjectId(null);
+    setEditFormState({ name: "", description: "" });
+    setEditError(null);
+  };
+
+  const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingProjectId) {
+      return;
+    }
+
+    const trimmedName = editFormState.name.trim();
+    if (!trimmedName) {
+      setEditError("Project name is required.");
+      return;
+    }
+
+    updateProject.mutate(
+      {
+        id: editingProjectId,
+        name: trimmedName,
+        description: editFormState.description.trim() || null,
+      },
+      {
+        onSuccess: () => {
+          cancelEdit();
+        },
+        onError: (error) => {
+          setEditError(error.message ?? "Unable to update project.");
+        },
+      },
+    );
+  };
+
+  const isCreatePending = createProject.isPending;
+  const isDeletePending = deleteProject.isPending;
+  const isUpdatePending = updateProject.isPending;
+
+  const sortedProjects = useMemo(() => projects ?? [], [projects]);
 
   return (
     <div className="space-y-8">
@@ -111,7 +171,7 @@ export default function ProjectsPage() {
                     setFormState((prev) => ({ ...prev, name: event.target.value }))
                   }
                   placeholder="e.g. Hypertension Lifestyle Review"
-                  disabled={createProject.isPending}
+                  disabled={isCreatePending}
                 />
               </div>
               <div className="space-y-2">
@@ -124,15 +184,15 @@ export default function ProjectsPage() {
                   }
                   placeholder="Optional summary for collaborators or future you."
                   rows={3}
-                  disabled={createProject.isPending}
+                  disabled={isCreatePending}
                 />
               </div>
               {formError ? (
                 <p className="text-sm text-destructive">{formError}</p>
               ) : null}
               <div className="flex items-center gap-3">
-                <Button type="submit" disabled={createProject.isPending}>
-                  {createProject.isPending ? (
+                <Button type="submit" disabled={isCreatePending}>
+                  {isCreatePending ? (
                     <span className="flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Creating…
@@ -145,7 +205,7 @@ export default function ProjectsPage() {
                   type="button"
                   variant="ghost"
                   onClick={() => setFormState({ name: "", description: "" })}
-                  disabled={createProject.isPending}
+                  disabled={isCreatePending}
                 >
                   Reset
                 </Button>
@@ -174,24 +234,88 @@ export default function ProjectsPage() {
                   <div key={index} className="h-16 w-full animate-pulse rounded bg-muted/60" />
                 ))}
               </div>
-            ) : projects && projects.length > 0 ? (
+            ) : sortedProjects.length > 0 ? (
               <ul className="space-y-3">
-                {projects.map((project) => (
-                  <li
-                    key={project.id}
-                    className="rounded-lg border border-border bg-card p-4 shadow-sm"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h2 className="text-sm font-semibold text-foreground">{project.name}</h2>
-                        {project.description ? (
-                          <p className="text-xs text-muted-foreground">
-                            {project.description}
-                          </p>
-                        ) : null}
-                        <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground/70">
-                          Updated {new Date(project.updatedAt).toLocaleString()}
-                        </p>
+                {sortedProjects.map((project) => {
+                  const isEditing = editingProjectId === project.id;
+                  const displayUpdatedAt = new Date(project.updatedAt).toLocaleString();
+
+                  return (
+                    <li
+                      key={project.id}
+                      className="rounded-lg border border-border bg-card p-4 shadow-sm"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <form className="space-y-3" onSubmit={handleEditSubmit}>
+                            <div className="space-y-1">
+                              <Label htmlFor={`edit-name-${project.id}`}>Project name</Label>
+                              <Input
+                                id={`edit-name-${project.id}`}
+                                value={editFormState.name}
+                                onChange={(event) =>
+                                  setEditFormState((prev) => ({
+                                    ...prev,
+                                    name: event.target.value,
+                                  }))
+                                }
+                                disabled={isUpdatePending}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor={`edit-description-${project.id}`}>Description</Label>
+                              <Textarea
+                                id={`edit-description-${project.id}`}
+                                value={editFormState.description}
+                                onChange={(event) =>
+                                  setEditFormState((prev) => ({
+                                    ...prev,
+                                    description: event.target.value,
+                                  }))
+                                }
+                                rows={3}
+                                disabled={isUpdatePending}
+                              />
+                            </div>
+                            {editError ? (
+                              <p className="text-sm text-destructive">{editError}</p>
+                            ) : null}
+                            <div className="flex items-center gap-2">
+                              <Button type="submit" size="sm" disabled={isUpdatePending}>
+                                {isUpdatePending ? (
+                                  <span className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Saving…
+                                  </span>
+                                ) : (
+                                  "Save changes"
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={cancelEdit}
+                                disabled={isUpdatePending}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div>
+                            <h2 className="text-sm font-semibold text-foreground">{project.name}</h2>
+                            {project.description ? (
+                              <p className="text-xs text-muted-foreground">
+                                {project.description}
+                              </p>
+                            ) : null}
+                            <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground/70">
+                              Updated {displayUpdatedAt}
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <Button variant="outline" size="sm" asChild>
@@ -206,13 +330,22 @@ export default function ProjectsPage() {
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/project/${project.id}/draft`}>Draft</Link>
                         </Button>
+                        {!isEditing ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEdit(project)}
+                          >
+                            Edit
+                          </Button>
+                        ) : null}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="text-destructive hover:text-destructive"
-                              disabled={deleteProject.isPending}
+                              disabled={isDeletePending}
                             >
                               <Trash className="h-4 w-4" />
                               <span className="sr-only">Delete project</span>
@@ -230,7 +363,7 @@ export default function ProjectsPage() {
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDelete(project.id)}
-                                disabled={deleteProject.isPending}
+                                disabled={isDeletePending}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
                                 Delete
@@ -241,7 +374,8 @@ export default function ProjectsPage() {
                       </div>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             ) : (
               <div className="rounded border border-dashed border-muted-foreground/40 p-8 text-center text-sm text-muted-foreground">

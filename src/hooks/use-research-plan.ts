@@ -5,6 +5,7 @@ import {
   type ResearchPlanContent,
   type ResearchPlanPayload,
 } from "@/lib/planning/plan";
+import type { GeneratedPlanSuggestion } from "@/lib/ai/plan-generator";
 
 const planKeys = {
   detail: (projectId: string | null) => [
@@ -115,6 +116,50 @@ export function useSaveResearchPlan(projectId: string | null) {
           queryClient.invalidateQueries({ queryKey: planKeys.detail(projectId) });
         }
       },
+    },
+  );
+}
+
+type GenerateInput = {
+  plan?: Partial<ResearchPlanContent>;
+};
+
+export function useGenerateResearchPlan(projectId: string | null) {
+  return useMutation<GeneratedPlanSuggestion, Error, GenerateInput | void>(
+    async (input) => {
+      if (!projectId) {
+        return Promise.reject(new Error("Unable to generate plan without a project context."));
+      }
+
+      const response = await fetch(`/api/projects/${projectId}/planning/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input ?? {}),
+      });
+
+      if (!response.ok) {
+        let message = "Failed to generate plan suggestions";
+        try {
+          const body = await response.json();
+          if (typeof body?.error === "string") {
+            message = body.error;
+          } else if (body?.error?.message) {
+            message = body.error.message;
+          }
+        } catch (error) {
+          console.error("useGenerateResearchPlan: unable to parse error response", error);
+        }
+        console.error("useGenerateResearchPlan: generation request failed", {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        throw new Error(message);
+      }
+
+      const data = (await response.json()) as { plan: GeneratedPlanSuggestion };
+      return data.plan;
     },
   );
 }

@@ -4,7 +4,7 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,10 +12,12 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { PlanningSection } from "@/components/planning/section";
+import { GeneratedPlanPreview } from "@/components/planning/generated-plan-preview";
 import { useProject } from "@/hooks/use-projects";
 import {
   useResearchPlan,
   useSaveResearchPlan,
+  useGenerateResearchPlan,
 } from "@/hooks/use-research-plan";
 import {
   DEFAULT_PLAN,
@@ -23,6 +25,7 @@ import {
   plansEqual,
   type ResearchPlanContent,
 } from "@/lib/planning/plan";
+import type { GeneratedPlanSuggestion } from "@/lib/ai/plan-generator";
 import { cn } from "@/lib/utils";
 
 const FORM_SECTIONS = [
@@ -66,8 +69,10 @@ export default function PlanningPage() {
     isFetching: planFetching,
   } = useResearchPlan(projectId ?? null);
   const savePlanMutation = useSaveResearchPlan(projectId ?? null);
+  const generatePlanMutation = useGenerateResearchPlan(projectId ?? null);
 
   const [plan, setPlan] = useState<ResearchPlanContent>(DEFAULT_PLAN);
+  const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanSuggestion | null>(null);
 
   useEffect(() => {
     if (!planData) {
@@ -102,6 +107,8 @@ export default function PlanningPage() {
   );
   const isSaving = savePlanMutation.isPending;
   const saveError = savePlanMutation.error;
+  const isGenerating = generatePlanMutation.isPending;
+  const generationError = generatePlanMutation.error;
   const saveDisabled =
     !projectId || isSaving || planLoading || !hasUnsavedChanges;
   const lastSavedLabel = useMemo(() => {
@@ -118,6 +125,34 @@ export default function PlanningPage() {
       return;
     }
     savePlanMutation.mutate(plan);
+  };
+
+  const handleGeneratePlan = () => {
+    if (!projectId) {
+      return;
+    }
+
+    setGeneratedPlan(null);
+    generatePlanMutation.mutate({ plan });
+  };
+
+  useEffect(() => {
+    if (generatePlanMutation.status === "success" && generatePlanMutation.data) {
+      setGeneratedPlan(generatePlanMutation.data);
+    }
+  }, [generatePlanMutation.status, generatePlanMutation.data]);
+
+  useEffect(() => {
+    setGeneratedPlan(null);
+  }, [projectId]);
+
+  const handleApplyGeneratedPlan = () => {
+    if (!generatedPlan) {
+      return;
+    }
+
+    const { scope, questions, queryStrategy, outline } = generatedPlan;
+    setPlan({ scope, questions, queryStrategy, outline });
   };
 
   return (
@@ -170,6 +205,23 @@ export default function PlanningPage() {
               )}
             </Button>
             <Button disabled>Run search (coming soon)</Button>
+            <Button
+              variant="secondary"
+              onClick={handleGeneratePlan}
+              disabled={isGenerating || !projectId}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate with AI
+                </>
+              )}
+            </Button>
           </div>
           {savePlanMutation.isError ? (
             <p
@@ -178,6 +230,11 @@ export default function PlanningPage() {
               aria-live="assertive"
             >
               {saveError?.message ?? "We couldn't save your plan. Please try again."}
+            </p>
+          ) : null}
+          {generationError ? (
+            <p className="text-xs text-destructive" role="alert" aria-live="assertive">
+              {generationError.message}
             </p>
           ) : null}
           {planFetching || isSaving || lastSavedLabel ? (
@@ -195,6 +252,15 @@ export default function PlanningPage() {
       </header>
 
       <Separator />
+
+      {generatedPlan ? (
+        <GeneratedPlanPreview
+          plan={generatedPlan}
+          onApply={handleApplyGeneratedPlan}
+          onDismiss={() => setGeneratedPlan(null)}
+          disabled={isGenerating}
+        />
+      ) : null}
 
       <section className="grid gap-6 md:grid-cols-2">
         {FORM_SECTIONS.map((section) => (

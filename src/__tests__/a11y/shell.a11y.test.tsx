@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { axe } from "vitest-axe";
 import React from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { QueryProvider } from "@/components/providers/query-provider";
 import HomePage from "@/app/page";
 import ProjectsPage from "@/app/projects/page";
 import PlanningPage from "@/app/project/[id]/planning/page";
@@ -20,56 +20,93 @@ const routerMocks = {
   back: vi.fn(),
 };
 
+const projectHookMocks = vi.hoisted(() => ({
+  useProjects: vi.fn(),
+  useProject: vi.fn(),
+  useCreateProject: vi.fn(),
+  useUpdateProject: vi.fn(),
+  useDeleteProject: vi.fn(),
+}));
+
+const planHookMocks = vi.hoisted(() => ({
+  useResearchPlan: vi.fn(),
+  useSaveResearchPlan: vi.fn(),
+  useGenerateResearchPlan: vi.fn(),
+}));
+
 vi.mock("next/navigation", () => ({
   usePathname: () => mockUsePathname(),
   useParams: () => mockUseParams(),
   useRouter: () => routerMocks,
 }));
 
-const originalFetch = global.fetch;
+vi.mock("@/hooks/use-projects", () => ({
+  useProjects: () => projectHookMocks.useProjects(),
+  useProject: (...args: Parameters<typeof projectHookMocks.useProject>) =>
+    projectHookMocks.useProject(...args),
+  useCreateProject: () => projectHookMocks.useCreateProject(),
+  useUpdateProject: () => projectHookMocks.useUpdateProject(),
+  useDeleteProject: () => projectHookMocks.useDeleteProject(),
+}));
+
+vi.mock("@/hooks/use-research-plan", () => ({
+  useResearchPlan: (...args: Parameters<typeof planHookMocks.useResearchPlan>) =>
+    planHookMocks.useResearchPlan(...args),
+  useSaveResearchPlan: () => planHookMocks.useSaveResearchPlan(),
+  useGenerateResearchPlan: () => planHookMocks.useGenerateResearchPlan(),
+}));
 
 beforeEach(() => {
   mockUsePathname.mockReset();
   mockUseParams.mockReset();
   Object.values(routerMocks).forEach((fn) => fn.mockReset());
+  Object.values(projectHookMocks).forEach((fn) => fn.mockReset());
+  Object.values(planHookMocks).forEach((fn) => fn.mockReset());
+
+  projectHookMocks.useProjects.mockReturnValue({
+    data: [],
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  });
+  projectHookMocks.useProject.mockReturnValue({
+    data: null,
+    isLoading: false,
+  });
+  projectHookMocks.useCreateProject.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  projectHookMocks.useUpdateProject.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  projectHookMocks.useDeleteProject.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  planHookMocks.useSaveResearchPlan.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    isError: false,
+    error: null,
+  });
+  planHookMocks.useGenerateResearchPlan.mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    isError: false,
+    error: null,
+    status: "idle",
+    data: null,
+  });
+  planHookMocks.useResearchPlan.mockReturnValue({
+    data: null,
+    isLoading: false,
+    isFetching: false,
+  });
 });
 
 afterEach(() => {
   cleanup();
-  if (originalFetch) {
-    global.fetch = originalFetch;
-  } else {
-    // @ts-expect-error - delete for test cleanup
-    delete global.fetch;
-  }
   vi.clearAllMocks();
 });
 
-type FetchMap = Record<string, unknown>;
-
-function setupFetchMock(map: FetchMap) {
-  global.fetch = vi.fn(async (input: RequestInfo | URL) => {
-    const url = typeof input === "string" ? input : input.toString();
-    const entry = Object.entries(map).find(([key]) => url.endsWith(key));
-
-    if (!entry) {
-      return new Response("Not Found", { status: 404 });
-    }
-
-    const [, value] = entry;
-    return new Response(JSON.stringify(value), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }) as unknown as typeof fetch;
-}
-
 function renderWithinShell(ui: React.ReactElement) {
-  const client = new QueryClient();
   return render(
-    <QueryClientProvider client={client}>
+    <QueryProvider>
       <AppShell>{ui}</AppShell>
-    </QueryClientProvider>,
+    </QueryProvider>,
   );
 }
 
@@ -105,8 +142,11 @@ describe("Workspace shell accessibility", () => {
   test("Projects route passes axe audit", async () => {
     mockUsePathname.mockReturnValue("/projects");
     mockUseParams.mockReturnValue({});
-    setupFetchMock({
-      "/api/projects": [sampleProject],
+    projectHookMocks.useProjects.mockReturnValue({
+      data: [sampleProject],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
     });
 
     const { container } = renderWithinShell(<ProjectsPage />);
@@ -122,9 +162,14 @@ describe("Workspace shell accessibility", () => {
   test("Planning route passes axe audit", async () => {
     mockUsePathname.mockReturnValue("/project/demo-project/planning");
     mockUseParams.mockReturnValue({ id: "demo-project" });
-    setupFetchMock({
-      "/api/projects/demo-project": sampleProject,
-      "/api/projects/demo-project/planning": samplePlan,
+    projectHookMocks.useProject.mockReturnValue({
+      data: sampleProject,
+      isLoading: false,
+    });
+    planHookMocks.useResearchPlan.mockReturnValue({
+      data: samplePlan,
+      isLoading: false,
+      isFetching: false,
     });
 
     const { container } = renderWithinShell(<PlanningPage />);

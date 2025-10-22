@@ -4,6 +4,18 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-22 — Project CRUD tRPC migration & UI edits
+- Introduced tRPC stack (router, context, app handler) and added `/api/trpc` endpoint using superjson for consistent serialization.
+- Replaced REST-based project hooks with tRPC-powered React Query mutations including optimistic create/update/delete flows and activity logging for lifecycle events.
+- Refreshed Projects workspace with inline editing, AI-friendly UX states, and error handling aligned to the new hooks.
+- Added unit coverage for the project router and adjusted accessibility tests to account for mocked hooks/provider setup.
+
+### 2025-10-22 — AI Plan Generator & Planning UX Integration
+- Added `/api/projects/:id/planning/generate` endpoint to deliver AI-authored research plan suggestions with database/source recommendations and safe fallbacks.
+- Implemented `generateResearchPlanSuggestion` OpenAI helper with structured JSON parsing, rate limiting, and deterministic defaults when the model is unavailable.
+- Enhanced the Planning workspace with an "Generate with AI" control, preview panel, and apply flow that keeps optimistic saves/error messaging accessible.
+- Introduced React Query mutations and Vitest coverage for the endpoint to ensure the new workflow remains stable.
+
 ### 2025-10-22 — Research Plan Persistence & Planning UX Save Flow
 - Created `/api/projects/:id/planning` GET/PUT endpoints that normalize research plan text, enforce per-project uniqueness, and hydrate defaults when no record exists.
 - Added Prisma migration extending `ResearchPlan` (optional `questions`, unique `projectId`) and utility helpers for serializing plan content.
