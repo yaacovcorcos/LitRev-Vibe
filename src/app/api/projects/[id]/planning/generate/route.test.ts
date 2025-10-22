@@ -16,12 +16,20 @@ const planGeneratorMock = vi.hoisted(() => ({
   generateResearchPlanSuggestion: vi.fn(),
 }));
 
+const activityMock = vi.hoisted(() => ({
+  logActivity: vi.fn(),
+}));
+
 vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
 }));
 
 vi.mock("@/lib/ai/plan-generator", () => ({
   generateResearchPlanSuggestion: planGeneratorMock.generateResearchPlanSuggestion,
+}));
+
+vi.mock("@/lib/activity-log", () => ({
+  logActivity: activityMock.logActivity,
 }));
 
 const params = { params: { id: "project-1" } };
@@ -31,6 +39,7 @@ describe("POST /api/projects/:id/planning/generate", () => {
     prismaMock.project.findUnique.mockReset();
     prismaMock.researchPlan.findUnique.mockReset();
     planGeneratorMock.generateResearchPlanSuggestion.mockReset();
+    activityMock.logActivity.mockReset();
   });
 
   it("returns 404 when project is missing", async () => {
@@ -43,6 +52,7 @@ describe("POST /api/projects/:id/planning/generate", () => {
 
     expect(response.status).toBe(404);
     expect(planGeneratorMock.generateResearchPlanSuggestion).not.toHaveBeenCalled();
+    expect(activityMock.logActivity).not.toHaveBeenCalled();
   });
 
   it("returns 400 when payload invalid", async () => {
@@ -58,6 +68,7 @@ describe("POST /api/projects/:id/planning/generate", () => {
 
     expect(response.status).toBe(400);
     expect(planGeneratorMock.generateResearchPlanSuggestion).not.toHaveBeenCalled();
+    expect(activityMock.logActivity).not.toHaveBeenCalled();
   });
 
   it("returns AI suggestion response", async () => {
@@ -93,6 +104,12 @@ describe("POST /api/projects/:id/planning/generate", () => {
       expect.objectContaining({
         overrides: { scope: "Custom scope" },
         project: expect.objectContaining({ id: "project-1" }),
+      }),
+    );
+    expect(activityMock.logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "project-1",
+        action: "plan.generated",
       }),
     );
   });

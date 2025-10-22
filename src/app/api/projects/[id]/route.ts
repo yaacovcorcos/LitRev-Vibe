@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { toInputJson } from "@/lib/prisma/json";
 import { serializeProject } from "@/lib/projects/serialize";
 import {
+  normalizeProjectSettings,
   projectSettingsPatchSchema,
   resolveProjectSettings,
 } from "@/lib/projects/settings";

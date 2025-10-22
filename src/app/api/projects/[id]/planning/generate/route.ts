@@ -8,6 +8,7 @@ import {
   type ResearchPlanContent,
 } from "@/lib/planning/plan";
 import { generateResearchPlanSuggestion } from "@/lib/ai/plan-generator";
+import { logActivity } from "@/lib/activity-log";
 
 const generateSchema = z.object({
   plan: z
@@ -65,6 +66,15 @@ export async function POST(request: Request, { params }: RouteParams) {
     project,
     currentPlan,
     overrides: overrides ?? undefined,
+  });
+
+  await logActivity({
+    projectId: params.id,
+    action: "plan.generated",
+    payload: {
+      hasOverrides: Boolean(overrides && Object.keys(overrides).length > 0),
+      targetSources: suggestion.targetSources,
+    },
   });
 
   return NextResponse.json({ plan: suggestion });

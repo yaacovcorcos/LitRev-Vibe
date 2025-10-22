@@ -10,7 +10,8 @@ An AI-assisted medical literature review and authoring workspace. The MVP is bei
 - **Component Library:** shadcn/ui (New York style)
 - **State/Queues:** BullMQ + Redis
 - **Database ORM:** Prisma (PostgreSQL)
-- **Testing/Stories:** Vitest, Playwright (compose resumable flow), Storybook (smoke tests)
+- **API Transport:** tRPC 11 (React Query client) with superjson
+- **Testing/Stories:** Vitest, Playwright (workflow + visual snapshots), Storybook (smoke tests)
 - **Tooling:** pnpm, ESLint, PostCSS
 
 ## Project Structure
@@ -61,13 +62,15 @@ In CI, the same script runs via [`.github/workflows/ci.yml`](.github/workflows/c
 - Run the worker locally: `pnpm run worker` (adds a sample heartbeat job so you can confirm connectivity).
 - For CI or smoke checks: `pnpm run queue:smoke` (uses the same worker script).
 
-## Storybook & Visual Regression
+## Storybook & Design QA
 
 - Launch Storybook locally: `pnpm run storybook`.
 - Smoke test in CI/local: `pnpm run storybook:test` (uses `--ci --smoke-test`).
 - Build static bundle: `pnpm run storybook:build`.
 - Optional Chromatic run: export `CHROMATIC_PROJECT_TOKEN` then `pnpm run chromatic` (skips automatically if the token is missing).
 - Baseline design docs live in `src/stories/DesignTokens.stories.tsx` and share tokens with the application code.
+- Visual baselines for the app shell live in Playwright (`playwright/design-qa.spec.ts`). Run `pnpm exec playwright test --grep @visual` to compare against snapshots, or `pnpm exec playwright test --grep @visual --update-snapshots` after intentional UI changes.
+- The full checklist for visual + accessibility sign-off is documented in [`docs/design/design-qa-checklist.md`](docs/design/design-qa-checklist.md).
 
 ## Getting Started
 
@@ -75,7 +78,7 @@ In CI, the same script runs via [`.github/workflows/ci.yml`](.github/workflows/c
 2. Copy env template: `cp .env.example .env` (fill values as needed)
 3. Run dev server: `pnpm run dev`
 4. Run Storybook: `pnpm run storybook` (optional)
-5. Run Playwright checks (optional): `pnpm run playwright:test` *(uses mock Redis in test harness)*
+5. Run Playwright checks (optional): `pnpm run playwright:test` *(uses mock Redis in test harness; add `--grep @visual` to include design QA snapshots)*
 
 ## Application Development
 
@@ -93,5 +96,5 @@ In CI, the same script runs via [`.github/workflows/ci.yml`](.github/workflows/c
 
 ## Next Steps
 
-- Scaffold the application shell (Milestone 1 in `docs/planning/litrev-mvp-implementation-plan-v2.md`).
-- Add project-specific scripts (e.g., `format:check`, `lint`, `test`, `storybook:test`) once the codebase is initialized so the verification pipeline can enforce them automatically.
+- Review Milestone plans in `docs/planning/litrev-mvp-implementation-plan-v2.md` for remaining feature work.
+- Before merging UI changes, walk through the Design QA checklist and update Playwright baselines when necessary.

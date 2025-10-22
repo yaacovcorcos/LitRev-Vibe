@@ -9,6 +9,12 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 - Replaced REST-based project hooks with tRPC-powered React Query mutations including optimistic create/update/delete flows and activity logging for lifecycle events.
 - Refreshed Projects workspace with inline editing, AI-friendly UX states, and error handling aligned to the new hooks.
 - Added unit coverage for the project router and adjusted accessibility tests to account for mocked hooks/provider setup.
+- Instrumented planning save/generate endpoints to emit activity log entries for timeline visibility.
+
+### 2025-10-22 — Design QA guardrails
+- Authored design QA checklist covering visual regression, accessibility, responsive, and documentation signoffs (`docs/design/design-qa-checklist.md`).
+- Added Playwright visual snapshot tests for Home, Projects, and Planning shells with mocked data and baseline screenshots.
+- Updated Playwright config to boot the Next.js app automatically during CI, enabling `pnpm playwright:test` to run as part of the verification workflow.
 
 ### 2025-10-22 — AI Plan Generator & Planning UX Integration
 - Added `/api/projects/:id/planning/generate` endpoint to deliver AI-authored research plan suggestions with database/source recommendations and safe fallbacks.

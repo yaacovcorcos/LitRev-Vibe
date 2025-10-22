@@ -21,12 +21,14 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `docs/development/` — Testing strategy, workflows (skeleton).
 - `docs/reviews/` — QA artifacts and responsive reviews (e.g., `2025-10-15-triage-ledger-cross-device.md`).
 - `docs/design/draft-workspace.md` — Draft workspace interaction patterns (editing, approvals, inspector).
+- `docs/design/design-qa-checklist.md` — Visual regression and accessibility checklist for shell changes.
 - (future) `docs/api/` — tRPC routes, adapter contracts.
 
 - `app/` — Next.js App Router entry points (`layout.tsx`, `page.tsx`, global styles).
 - `app/api/trpc/[trpc]/route.ts` — tRPC fetch handler exposing the application router.
 - `components/layout/` — Workspace shell primitives (sidebar, header, command menu, app shell).
 - `components/planning/` — Planning workspace components (section cards, editors).
+- `components/planning/generated-plan-preview.tsx` — Preview panel for AI-generated plan suggestions.
 - `components/activity/` — Activity & undo timeline components.
 - `components/triage/` — Triage candidate cards and listing UI.
 - `components/draft/` — Draft workspace components (Tiptap editor wrapper, section listing).

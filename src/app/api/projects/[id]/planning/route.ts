@@ -9,6 +9,7 @@ import {
   EMPTY_PLAN_RESPONSE,
   normalizeResearchPlan,
 } from "@/lib/planning/plan";
+import { logActivity } from "@/lib/activity-log";
 
 type RouteParams = {
   params: {
@@ -110,6 +111,17 @@ export async function PUT(request: Request, { params }: RouteParams) {
   if (planInput.status === undefined && existingPlan?.status) {
     response.status = existingPlan.status;
   }
+
+  const changedFields = Object.keys(planInput);
+
+  await logActivity({
+    projectId: params.id,
+    action: existingPlan ? "plan.updated" : "plan.created",
+    payload: {
+      changedFields,
+      status: response.status,
+    },
+  });
 
   return NextResponse.json(response);
 }

@@ -3,9 +3,7 @@
 Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone cadence. Document notable features, fixes, and infrastructure changes.
 
 ## [Unreleased]
-- Added `/projects` workspace view with create/delete flows, quick links into planning/triage/ledger/draft, and refresh controls.
-- Hardened locator capture pipeline (API + UI) and aligned JSON payloads with Prisma types.
-- Cleaned documentation (`README.md`, `CHANGELOG.md`) to prep for the export milestone.
+- _Nothing yet_
 
 ## [2025-10-16] Milestone 4 — Draft & Compose
 - Delivered compose queue job with citation validation, draft section persistence, and resumable progress tracking.
@@ -26,8 +24,9 @@ Follow [Keep a Changelog](https://keepachangelog.com) principles at a milestone 
 
 ## [2025-10-13] Milestone 1 — Shell & Planning
 - Implemented App Shell (sidebar/header/command palette) and global layout wiring.
-- Added project CRUD REST endpoints, React Query hooks, and planning workspace with editable sections.
-- Introduced activity log scaffolding and navigation metadata.
+- Added project CRUD API (now tRPC-backed) with optimistic React Query hooks and activity logging.
+- Persisted planning workspace data, added AI plan generator endpoint/UI, and smoke-tested accessibility.
+- Introduced activity log scaffolding, navigation metadata, and design QA guardrails (Playwright visual baselines + checklist).
 
 ## [2025-10-13] Milestone 0 — Foundations
 - Added shared design tokens and Tailwind integration.
