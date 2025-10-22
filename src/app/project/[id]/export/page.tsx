@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowDownToLine, BadgeCheck, Loader2, Rocket, Ban } from "lucide-react";
+import { ArrowDownToLine, BadgeCheck, Info, Loader2, Rocket, Ban } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -119,19 +119,25 @@ export default function ProjectExportPage() {
         </nav>
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-1">
-            <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
+          <div className="space-y-2">
+            <h1 className="flex items-center gap-2 text-3xl font-semibold text-foreground">
               <Rocket className="h-6 w-6 text-muted-foreground" />
               Export Workspace
             </h1>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              Generate manuscript, bibliography, or PRISMA artifacts based on the current project state. Exports run in the
-              background and appear in the history timeline once complete.
+            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              Bundle a manuscript, bibliography, and PRISMA summary directly from your current project state. Launch an export whenever your ledger is ready—progress updates in real time, and every download contains a manifest describing the bundle.
             </p>
           </div>
-          <Button variant="outline" asChild>
-            <Link href={`/project/${projectId}/draft`}>Back to draft</Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" asChild>
+              <Link href={`/project/${projectId}/draft`}>Back to draft</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href={`/project/${projectId}/ledger`} className="text-sm">
+                Review ledger checkpoint
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -140,11 +146,22 @@ export default function ProjectExportPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>New export</CardTitle>
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <CardTitle className="text-xl">Configure new export</CardTitle>
+              <FormatSummary
+                selected={selectedFormat}
+                includeLedger={includeLedger}
+                includePrisma={includePrisma}
+              />
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {projectLoading ? (
-              <Skeleton className="h-24 w-full" />
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-44" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-36 w-full" />
+              </div>
             ) : (
               <FormatPicker
                 formats={formatOptions}
@@ -159,24 +176,27 @@ export default function ProjectExportPage() {
                 checked={includeLedger}
                 onChange={setIncludeLedger}
                 label="Include evidence ledger"
-                description="Attach a bibliography export alongside the manuscript."
+                description="Attach a BibTeX bibliography alongside the manuscript."
               />
               <ToggleRow
                 id="include-prisma"
                 checked={includePrisma}
                 onChange={setIncludePrisma}
                 label="Include PRISMA snapshot"
-                description="Embed search and triage counts in the export package."
+                description="Embed a PRISMA diagram summarising search and screening activity."
               />
             </div>
 
-            {feedbackMessage ? <p className="text-sm text-muted-foreground">{feedbackMessage}</p> : null}
+            {feedbackMessage ? (
+              <Callout tone={enqueueMutation.isError ? "destructive" : "notice"}>
+                {feedbackMessage}
+              </Callout>
+            ) : null}
 
             {isLocatorStrict ? (
-              <p className="text-xs text-muted-foreground">
-                Locator policy: <span className="font-medium">strict</span>. Exports are blocked while ledger items are missing
-                locator details.
-              </p>
+              <Callout tone="warning">
+                Locator policy is set to <span className="font-semibold">strict</span>. Add locators to every ledger item or relax the policy from project settings before exporting.
+              </Callout>
             ) : null}
 
             <div className="flex items-center gap-3">
@@ -193,7 +213,13 @@ export default function ProjectExportPage() {
 
         <Card>
         <CardHeader>
-          <CardTitle>PRISMA snapshot</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle>PRISMA snapshot</CardTitle>
+            <Badge variant="outline" className="gap-1 text-[11px] uppercase tracking-wide">
+              <Info className="h-3 w-3" />
+              Keeps and excludes tracked automatically
+            </Badge>
+          </div>
           </CardHeader>
           <CardContent>
             {metricsQuery.isLoading || diagramQuery.isLoading ? (
@@ -245,7 +271,11 @@ function FormatPicker({
   onSelect: (value: string) => void;
 }) {
   if (formats.length === 0) {
-    return <EmptyState message="No export formats enabled for this project." />;
+    return (
+      <Callout tone="warning">
+        No export formats are enabled for this project yet. Update export settings to unlock DOCX, Markdown, or BibTeX bundles.
+      </Callout>
+    );
   }
 
   return (
@@ -257,15 +287,18 @@ function FormatPicker({
             key={format}
             type="button"
             onClick={() => onSelect(format)}
-            className={`rounded-lg border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-              isActive ? "border-primary bg-primary/5" : "border-border hover:border-foreground/40"
+            className={`group rounded-lg border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+              isActive ? "border-primary/80 bg-primary/5 shadow-sm" : "border-border hover:border-foreground/40"
             }`}
           >
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold uppercase tracking-wide">{format}</span>
               {isActive ? <BadgeCheck className="h-4 w-4 text-primary" /> : null}
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">{formatDescription(format)}</p>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{formatDescription(format)}</p>
+            <p className="mt-3 text-[11px] uppercase tracking-wide text-muted-foreground/70">
+              Bundle includes {bundleSummaryForFormat(format)}
+            </p>
           </button>
         );
       })}
@@ -284,6 +317,43 @@ function formatDescription(format: string) {
     default:
       return "Custom export format.";
   }
+}
+
+function bundleSummaryForFormat(format: string) {
+  switch (format) {
+    case "docx":
+      return "manuscript (.docx), bibliography (.bib), PRISMA (.svg)";
+    case "markdown":
+      return "manuscript (.md), bibliography (.bib), PRISMA (.svg)";
+    case "bibtex":
+      return "bibliography (.bib)";
+    default:
+      return "all configured artifacts";
+  }
+}
+
+function FormatSummary({
+  selected,
+  includeLedger,
+  includePrisma,
+}: {
+  selected: string;
+  includeLedger: boolean;
+  includePrisma: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-semibold text-foreground/80">Selected bundle</span>
+        <Badge variant="outline" className="text-[11px] uppercase tracking-wide">
+          {selected}
+        </Badge>
+      </div>
+      <p>
+        {includeLedger ? "Bibliography attached." : "Bibliography excluded."} {includePrisma ? "PRISMA snapshot included." : "PRISMA snapshot skipped."}
+      </p>
+    </div>
+  );
 }
 
 function ToggleRow({
@@ -457,7 +527,6 @@ type Manifest = {
 
 function parseManifest(options: Record<string, unknown>) {
   if (!options || typeof options !== "object") {
-    console.warn("Export manifest missing or invalid", options);
     return null;
   }
 
@@ -465,20 +534,30 @@ function parseManifest(options: Record<string, unknown>) {
   const files = Array.isArray(manifest.files) ? manifest.files : undefined;
 
   if (!files) {
-    console.warn("Export manifest missing files array", options);
     return null;
   }
 
   const normalized = files.filter((file): file is Manifest["files"][number] => Boolean(file?.name));
 
-  if (normalized.length === 0) {
-    console.warn("Export manifest contains no files", options);
-    return null;
-  }
-
-  return { files: normalized };
+  return normalized.length > 0 ? { files: normalized } : null;
 }
 
+type CalloutTone = "notice" | "warning" | "destructive";
+
+function Callout({ tone, children }: { tone: CalloutTone; children: React.ReactNode }) {
+  const toneStyles: Record<CalloutTone, string> = {
+    notice: "border-primary/30 bg-primary/5 text-primary",
+    warning: "border-amber-400/80 bg-amber-50 text-amber-900",
+    destructive: "border-destructive/50 bg-destructive/10 text-destructive",
+  };
+
+  return (
+    <div className={`flex gap-2 rounded-md border px-3 py-2 text-xs leading-relaxed ${toneStyles[tone]}`}>
+      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span>{children}</span>
+    </div>
+  );
+}
 function HistorySkeleton() {
   return (
     <div className="space-y-3">
