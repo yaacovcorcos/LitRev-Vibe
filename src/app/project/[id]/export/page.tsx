@@ -367,6 +367,7 @@ function HistoryItem({ projectId, item }: { projectId: string | null; item: Expo
   const downloadUrl = item.status === "completed" && projectId
     ? `/api/projects/${projectId}/exports/${item.id}/download`
     : null;
+  const manifest = parseManifest(item.options);
 
   return (
     <li className="rounded-lg border border-border bg-card p-4 shadow-sm">
@@ -382,9 +383,9 @@ function HistoryItem({ projectId, item }: { projectId: string | null; item: Expo
         </div>
         <div className="flex items-center gap-2">
           {downloadUrl ? (
-            <Button asChild size="sm">
+            <Button asChild size="sm" title="Download manuscript, bibliography, and PRISMA diagram">
               <Link href={downloadUrl} prefetch={false}>
-                <ArrowDownToLine className="mr-2 h-4 w-4" /> Download
+                <ArrowDownToLine className="mr-2 h-4 w-4" /> Download bundle
               </Link>
             </Button>
           ) : null}
@@ -410,6 +411,21 @@ function HistoryItem({ projectId, item }: { projectId: string | null; item: Expo
           <span>{renderErrorMessage(item.error)}</span>
         </p>
       ) : null}
+      {manifest && manifest.files.length > 0 ? (
+        <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">Bundle contents</p>
+          <ul className="space-y-1">
+            {manifest.files.map((file) => (
+              <li key={file.name} className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                  {file.contentType}
+                </Badge>
+                <span className="text-muted-foreground/80">{file.name}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </li>
   );
 }
@@ -433,6 +449,34 @@ function renderErrorMessage(value: unknown) {
   }
 
   return "Export failed.";
+}
+
+type Manifest = {
+  files: Array<{ name: string; contentType: string }>;
+};
+
+function parseManifest(options: Record<string, unknown>) {
+  if (!options || typeof options !== "object") {
+    console.warn("Export manifest missing or invalid", options);
+    return null;
+  }
+
+  const manifest = options as Partial<Manifest>;
+  const files = Array.isArray(manifest.files) ? manifest.files : undefined;
+
+  if (!files) {
+    console.warn("Export manifest missing files array", options);
+    return null;
+  }
+
+  const normalized = files.filter((file): file is Manifest["files"][number] => Boolean(file?.name));
+
+  if (normalized.length === 0) {
+    console.warn("Export manifest contains no files", options);
+    return null;
+  }
+
+  return { files: normalized };
 }
 
 function HistorySkeleton() {
