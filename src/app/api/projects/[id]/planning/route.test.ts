@@ -100,6 +100,7 @@ describe("/api/projects/:id/planning", () => {
 
     it("creates or updates a plan for the project", async () => {
       prismaMock.project.findUnique.mockResolvedValue({ id: "project-1" });
+      prismaMock.researchPlan.findUnique.mockResolvedValue(null);
       prismaMock.researchPlan.upsert.mockResolvedValue(planRecord);
 
       const response = await PUT(
@@ -125,7 +126,6 @@ describe("/api/projects/:id/planning", () => {
           questions: "New questions",
           queryStrategy: "New query",
           outline: "New outline",
-          status: "draft",
           targetSources: ["pubmed", "crossref"],
         }),
         create: expect.objectContaining({
@@ -146,6 +146,35 @@ describe("/api/projects/:id/planning", () => {
         outline: "Stored outline",
         targetSources: ["pubmed"],
       });
+    });
+
+    it("preserves existing status when request omits it", async () => {
+      prismaMock.project.findUnique.mockResolvedValue({ id: "project-1" });
+      prismaMock.researchPlan.findUnique.mockResolvedValue({ status: "review" });
+      prismaMock.researchPlan.upsert.mockResolvedValue({
+        ...planRecord,
+        status: "review",
+      });
+
+      const response = await PUT(
+        new Request("http://test.local", {
+          method: "PUT",
+          body: JSON.stringify({ scope: "Updated" }),
+        }),
+        params,
+      );
+
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(prismaMock.researchPlan.upsert).toHaveBeenCalledWith({
+        where: { projectId: "project-1" },
+        update: expect.objectContaining({
+          scope: "Updated",
+        }),
+        create: expect.any(Object),
+      });
+      expect(payload.status).toBe("review");
     });
   });
 });

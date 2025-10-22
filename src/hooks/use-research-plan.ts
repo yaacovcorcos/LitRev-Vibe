@@ -43,7 +43,10 @@ export function useSaveResearchPlan(projectId: string | null) {
     {
       mutationFn: async (plan) => {
         if (!projectId) {
-          throw new Error("Project ID is required to save a plan");
+          console.warn("useSaveResearchPlan: projectId is required to save a plan.");
+          return Promise.reject(
+            new Error("Unable to save plan without a project context."),
+          );
         }
 
         const response = await fetch(`/api/projects/${projectId}/planning`, {
@@ -55,7 +58,22 @@ export function useSaveResearchPlan(projectId: string | null) {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to save plan");
+          let message = "Failed to save plan";
+          try {
+            const body = await response.json();
+            if (typeof body?.error === "string") {
+              message = body.error;
+            } else if (body?.error?.message) {
+              message = body.error.message;
+            }
+          } catch (error) {
+            console.error("useSaveResearchPlan: unable to parse error response", error);
+          }
+          console.error("useSaveResearchPlan: save request failed", {
+            status: response.status,
+            statusText: response.statusText,
+          });
+          throw new Error(message);
         }
 
         return response.json();
@@ -81,7 +99,8 @@ export function useSaveResearchPlan(projectId: string | null) {
 
         return { previous };
       },
-      onError: (_error, _plan, context) => {
+      onError: (error, _plan, context) => {
+        console.error("useSaveResearchPlan: mutation error", error);
         if (projectId && context?.previous) {
           queryClient.setQueryData(planKeys.detail(projectId), context.previous);
         }

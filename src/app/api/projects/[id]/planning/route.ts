@@ -59,13 +59,16 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.flatten() },
+      { error: parsed.error.format() },
       { status: 400 },
     );
   }
 
   const planInput = parsed.data;
-  const status = planInput.status ?? "draft";
+  const existingPlan = await prisma.researchPlan.findUnique({
+    where: { projectId: params.id },
+    select: { status: true },
+  });
 
   const scopeValue = planInput.scope ?? DEFAULT_PLAN.scope;
   const questionsValue = planInput.questions ?? DEFAULT_PLAN.questions;
@@ -78,11 +81,13 @@ export async function PUT(request: Request, { params }: RouteParams) {
     questions: toInputJson(questionsValue),
     queryStrategy: toInputJson(queryStrategyValue),
     outline: toInputJson(outlineValue),
-    status,
   };
 
   if (planInput.targetSources !== undefined) {
     updatePayload.targetSources = planInput.targetSources;
+  }
+  if (planInput.status !== undefined) {
+    updatePayload.status = planInput.status;
   }
 
   const createPayload: Prisma.ResearchPlanUpsertArgs["create"] = {
@@ -92,7 +97,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     queryStrategy: toInputJson(queryStrategyValue),
     outline: toInputJson(outlineValue),
     targetSources: planInput.targetSources ?? [],
-    status,
+    status: planInput.status ?? "draft",
   };
 
   const plan = await prisma.researchPlan.upsert({
@@ -101,5 +106,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     create: createPayload,
   });
 
-  return NextResponse.json(normalizeResearchPlan(plan));
+  const response = normalizeResearchPlan(plan);
+  if (planInput.status === undefined && existingPlan?.status) {
+    response.status = existingPlan.status;
+  }
+
+  return NextResponse.json(response);
 }

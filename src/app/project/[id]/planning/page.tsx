@@ -101,6 +101,7 @@ export default function PlanningPage() {
     [plan, comparisonPlan],
   );
   const isSaving = savePlanMutation.isPending;
+  const saveError = savePlanMutation.error;
   const saveDisabled =
     !projectId || isSaving || planLoading || !hasUnsavedChanges;
   const lastSavedLabel = useMemo(() => {
@@ -170,8 +171,17 @@ export default function PlanningPage() {
             </Button>
             <Button disabled>Run search (coming soon)</Button>
           </div>
+          {savePlanMutation.isError ? (
+            <p
+              className="text-xs text-destructive"
+              role="alert"
+              aria-live="assertive"
+            >
+              {saveError?.message ?? "We couldn't save your plan. Please try again."}
+            </p>
+          ) : null}
           {planFetching || isSaving || lastSavedLabel ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground" aria-live="polite">
               {isSaving
                 ? "Saving changes…"
                 : planFetching
