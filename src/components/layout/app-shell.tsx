@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { ReactNode, useCallback, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -21,6 +21,22 @@ export function AppShell({ children }: AppShellProps) {
     [],
   );
   const handleCloseMobileNav = useCallback(() => setMobileNavOpen(false), []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+
+    function handleResize(event: MediaQueryListEvent) {
+      if (event.matches) {
+        setMobileNavOpen(false);
+      }
+    }
+
+    mediaQuery.addEventListener("change", handleResize);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleResize);
+    };
+  }, []);
 
   return (
     <Dialog.Root open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
