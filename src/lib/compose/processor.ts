@@ -276,23 +276,17 @@ export function calculateProgress(state: ComposeJobState, totalSections: number)
     return 1;
   }
 
-  const { completed, running, pending } = state.sections.reduce(
+  const { completed, running } = state.sections.reduce(
     (acc, section) => {
       if (section.status === "completed") {
         acc.completed += 1;
       } else if (section.status === "running") {
         acc.running += 1;
-      } else if (section.status === "pending") {
-        acc.pending += 1;
       }
       return acc;
     },
-    { completed: 0, running: 0, pending: 0 },
+    { completed: 0, running: 0 },
   );
-
-  if (pending === totalSections && running === 0 && completed === 0) {
-    return 0;
-  }
 
   const baseProgress = (completed + running * RUNNING_SECTION_PROGRESS_WEIGHT) / totalSections;
   return Math.min(1, baseProgress);
