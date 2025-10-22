@@ -33,3 +33,8 @@ Document pivotal architectural or product choices. For each entry, capture the c
 - **Context:** REST endpoints for project CRUD duplicated logic and made optimistic updates + activity logging cumbersome within the React Query client.
 - **Decision:** Adopt tRPC (with superjson) for project lifecycle operations, exposing typed procedures consumed via `@trpc/react-query` and logging create/update/delete actions centrally.
 - **Consequences:** Projects page benefits from optimistic UX and typed hooks; future modules can share the tRPC gateway without duplicating serialization or error handling.
+
+### 2025-10-23 — Notifications Workspace Placeholder
+- **Context:** Milestone 1 navigation surfaced a Notifications link that routed to a 404, breaking the shell experience.
+- **Decision:** Ship a client-side `/notifications` page stub describing the upcoming alerting features and linking to Runs, keeping the navigation viable until real feeds land.
+- **Consequences:** Users no longer hit a dead-end when exploring the workspace; remediation plan stays actionable without hiding the destination.
