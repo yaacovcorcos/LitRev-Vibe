@@ -63,6 +63,8 @@
     "vitest-axe": "^0.1.0"
   },
   "dependencies": {
+    "@citation-js/core": "^0.7.21",
+    "@citation-js/plugin-csl": "^0.7.21",
     "@prisma/client": "^6.17.1",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -81,6 +83,7 @@
     "date-fns": "^4.1.0",
     "docx": "9.0.3",
     "ioredis": "^5.8.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.545.0",
     "next": "14.2.11",
     "node-cron": "^3.0.3",

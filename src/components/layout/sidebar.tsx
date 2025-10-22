@@ -7,15 +7,38 @@ import { Button } from "@/components/ui/button";
 import { workspaceNav } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+type SidebarProps = {
+  variant?: "desktop" | "mobile";
+  onNavigate?: () => void;
+  className?: string;
+};
+
+export function Sidebar({
+  variant = "desktop",
+  onNavigate,
+  className,
+}: SidebarProps) {
   const pathname = usePathname();
+  const isMobile = variant === "mobile";
 
   return (
-    <aside className="hidden w-64 flex-col border-r bg-background lg:flex">
+    <aside
+      className={cn(
+        "flex flex-col bg-background",
+        isMobile
+          ? "h-full w-full max-w-xs border-r shadow-xl"
+          : "hidden w-64 border-r lg:flex",
+        className,
+      )}
+      aria-label="Primary navigation"
+    >
       <div className="flex h-16 items-center border-b px-6">
         <div className="text-base font-semibold text-foreground">LitRev-Vibe</div>
       </div>
-      <nav className="flex-1 space-y-6 px-3 py-6">
+      <nav
+        className="flex-1 space-y-6 px-3 py-6"
+        aria-label="Workspace navigation"
+      >
         {workspaceNav.map((section) => (
           <div key={section.label} className="space-y-3">
             <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -35,6 +58,7 @@ export function Sidebar() {
                       "w-full justify-start gap-3 px-3 text-sm font-medium",
                       isActive && "text-foreground"
                     )}
+                    onClick={onNavigate}
                   >
                     <Link href={item.href}>
                       <Icon className="h-4 w-4" />
