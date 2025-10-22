@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_PROJECT_SETTINGS } from "@/lib/projects/settings";
@@ -43,6 +44,12 @@ function buildContext(): ExportContext {
           journal: "Cardio Journal",
           publishedAt: "2021",
           doi: "10.1000/xyz",
+          authors: [
+            {
+              given: "John A.",
+              family: "Smith",
+            },
+          ],
         },
         locators: [
           {
@@ -111,12 +118,13 @@ describe("export adapters", () => {
     expect(content).toContain("doi = {10.1000/xyz}");
   });
 
-  it("generates a DOCX artifact", async () => {
+  it("generates a DOCX artifact with references when enabled", async () => {
     const adapter = getExportAdapter("docx");
     expect(adapter).toBeTruthy();
 
-    const artifact = await adapter!.generate(buildContext(), {
-      includeLedger: false,
+    const context = buildContext();
+    const artifact = await adapter!.generate(context, {
+      includeLedger: true,
       includePrismaDiagram: false,
     });
 
@@ -125,5 +133,20 @@ describe("export adapters", () => {
     const buffer = artifact.data;
     expect(Buffer.isBuffer(buffer)).toBe(true);
     expect((buffer as Buffer).length).toBeGreaterThan(0);
+
+    const zip = await JSZip.loadAsync(buffer as Buffer);
+    const xml = await zip.file("word/document.xml")?.async("string");
+    expect(xml).toBeTruthy();
+    expect(xml).toContain("References");
+    expect(xml).toContain("Smith");
+
+    const withoutLedger = await adapter!.generate(context, {
+      includeLedger: false,
+      includePrismaDiagram: false,
+    });
+
+    const zipWithout = await JSZip.loadAsync(withoutLedger.data as Buffer);
+    const xmlWithout = await zipWithout.file("word/document.xml")?.async("string");
+    expect(xmlWithout).not.toContain("References");
   });
 });
