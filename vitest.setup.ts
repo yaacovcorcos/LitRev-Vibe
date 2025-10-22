@@ -1,8 +1,16 @@
-import "@testing-library/jest-dom/vitest";
-import * as axeMatchers from "vitest-axe/matchers";
 import { expect, vi } from "vitest";
 
-expect.extend(axeMatchers);
+async function setupDomMatchers() {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  await import("@testing-library/jest-dom/vitest");
+  const matchers = await import("vitest-axe/matchers");
+  expect.extend(matchers);
+}
+
+void setupDomMatchers();
 
 if (!("ResizeObserver" in globalThis)) {
   class ResizeObserverMock {
