@@ -219,9 +219,5 @@ function filenameForFormat(format: string, extension: string) {
 }
 
 function toBuffer(data: Buffer | Uint8Array | string) {
-  if (typeof data === "string") {
-    return Buffer.from(data, "utf-8");
-  }
-
   return Buffer.from(data);
 }

@@ -383,7 +383,7 @@ function HistoryItem({ projectId, item }: { projectId: string | null; item: Expo
         </div>
         <div className="flex items-center gap-2">
           {downloadUrl ? (
-            <Button asChild size="sm">
+            <Button asChild size="sm" title="Download manuscript, bibliography, and PRISMA diagram">
               <Link href={downloadUrl} prefetch={false}>
                 <ArrowDownToLine className="mr-2 h-4 w-4" /> Download bundle
               </Link>
@@ -457,11 +457,26 @@ type Manifest = {
 
 function parseManifest(options: Record<string, unknown>) {
   if (!options || typeof options !== "object") {
+    console.warn("Export manifest missing or invalid", options);
     return null;
   }
 
-  const files = Array.isArray((options as Manifest).files) ? (options as Manifest).files : [];
-  return files.length > 0 ? { files } : null;
+  const manifest = options as Partial<Manifest>;
+  const files = Array.isArray(manifest.files) ? manifest.files : undefined;
+
+  if (!files) {
+    console.warn("Export manifest missing files array", options);
+    return null;
+  }
+
+  const normalized = files.filter((file): file is Manifest["files"][number] => Boolean(file?.name));
+
+  if (normalized.length === 0) {
+    console.warn("Export manifest contains no files", options);
+    return null;
+  }
+
+  return { files: normalized };
 }
 
 function HistorySkeleton() {

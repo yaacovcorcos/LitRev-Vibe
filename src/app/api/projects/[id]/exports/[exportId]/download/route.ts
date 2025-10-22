@@ -35,13 +35,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   const absolutePath = resolveStoredExportPath(record.storagePath);
   const storedExtension = path.extname(record.storagePath).toLowerCase();
+  const ZIP_EXTENSION = ".zip";
 
   try {
     const buffer = await fs.readFile(absolutePath);
     const ext = path.extname(absolutePath) || `.${record.format}`;
     const projectName = record.project?.name?.trim() || `project-${record.projectId}`;
     const filename = `${slugify(projectName)}-${params.exportId}${ext}`;
-    const contentType = storedExtension === ".zip"
+    const contentType = storedExtension === ZIP_EXTENSION
       ? "application/zip"
       : inferContentType(record.format);
 
