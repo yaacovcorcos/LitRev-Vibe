@@ -9,6 +9,7 @@ import {
   EMPTY_PLAN_RESPONSE,
   normalizeResearchPlan,
 } from "@/lib/planning/plan";
+import { logActivity } from "@/lib/activity-log";
 
 type RouteParams = {
   params: {
@@ -110,6 +111,23 @@ export async function PUT(request: Request, { params }: RouteParams) {
   if (planInput.status === undefined && existingPlan?.status) {
     response.status = existingPlan.status;
   }
+
+  const changedFields: string[] = [];
+  if (planInput.scope !== undefined) changedFields.push("scope");
+  if (planInput.questions !== undefined) changedFields.push("questions");
+  if (planInput.queryStrategy !== undefined) changedFields.push("queryStrategy");
+  if (planInput.outline !== undefined) changedFields.push("outline");
+  if (planInput.targetSources !== undefined) changedFields.push("targetSources");
+  if (planInput.status !== undefined) changedFields.push("status");
+
+  await logActivity({
+    projectId: params.id,
+    action: existingPlan ? "plan.updated" : "plan.created",
+    payload: {
+      changedFields,
+      status: response.status,
+    },
+  });
 
   return NextResponse.json(response);
 }

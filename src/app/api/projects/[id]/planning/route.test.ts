@@ -13,8 +13,16 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
+const activityMock = vi.hoisted(() => ({
+  logActivity: vi.fn(),
+}));
+
 vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
+}));
+
+vi.mock("@/lib/activity-log", () => ({
+  logActivity: activityMock.logActivity,
 }));
 
 const params = { params: { id: "project-1" } };
@@ -37,6 +45,7 @@ describe("/api/projects/:id/planning", () => {
     for (const group of Object.values(prismaMock)) {
       Object.values(group).forEach((fn) => fn.mockReset());
     }
+    activityMock.logActivity.mockReset();
   });
 
   describe("GET", () => {
@@ -96,6 +105,7 @@ describe("/api/projects/:id/planning", () => {
 
       expect(response.status).toBe(404);
       expect(prismaMock.researchPlan.upsert).not.toHaveBeenCalled();
+      expect(activityMock.logActivity).not.toHaveBeenCalled();
     });
 
     it("creates or updates a plan for the project", async () => {
@@ -146,6 +156,12 @@ describe("/api/projects/:id/planning", () => {
         outline: "Stored outline",
         targetSources: ["pubmed"],
       });
+      expect(activityMock.logActivity).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: "project-1",
+          action: "plan.created",
+        }),
+      );
     });
 
     it("preserves existing status when request omits it", async () => {
@@ -175,6 +191,12 @@ describe("/api/projects/:id/planning", () => {
         create: expect.any(Object),
       });
       expect(payload.status).toBe("review");
+      expect(activityMock.logActivity).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: "project-1",
+          action: "plan.updated",
+        }),
+      );
     });
   });
 });
