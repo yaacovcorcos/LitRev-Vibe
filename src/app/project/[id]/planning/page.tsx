@@ -85,7 +85,10 @@ export default function PlanningPage() {
   return (
     <div className="space-y-8">
       <header className="space-y-4">
-        <nav className="text-sm text-muted-foreground">
+        <nav
+          className="text-sm text-muted-foreground"
+          aria-label="Breadcrumb"
+        >
           <Link
             href="/projects"
             className="transition hover:text-foreground/80"

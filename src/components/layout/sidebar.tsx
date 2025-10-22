@@ -35,7 +35,10 @@ export function Sidebar({
       <div className="flex h-16 items-center border-b px-6">
         <div className="text-base font-semibold text-foreground">LitRev-Vibe</div>
       </div>
-      <nav className="flex-1 space-y-6 px-3 py-6">
+      <nav
+        className="flex-1 space-y-6 px-3 py-6"
+        aria-label="Workspace navigation"
+      >
         {workspaceNav.map((section) => (
           <div key={section.label} className="space-y-3">
             <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
