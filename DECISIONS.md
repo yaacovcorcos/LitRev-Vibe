@@ -28,3 +28,8 @@ Document pivotal architectural or product choices. For each entry, capture the c
 - **Context:** The planning workspace needed durable storage before layering optimistic saves, AI plan generation, and activity logging.
 - **Decision:** Store each project's research plan as a single `ResearchPlan` record keyed by `projectId`, keeping editable sections (scope, questions, query strategy, outline) as JSON but exposing text payloads via the API.
 - **Consequences:** Planning UI can hydrate/sync with one endpoint, optimistic mutations stay simple, and future AI/autosave features can enrich the same record without schema sprawl.
+
+### 2025-10-22 — Transition Project CRUD to tRPC
+- **Context:** REST endpoints for project CRUD duplicated logic and made optimistic updates + activity logging cumbersome within the React Query client.
+- **Decision:** Adopt tRPC (with superjson) for project lifecycle operations, exposing typed procedures consumed via `@trpc/react-query` and logging create/update/delete actions centrally.
+- **Consequences:** Projects page benefits from optimistic UX and typed hooks; future modules can share the tRPC gateway without duplicating serialization or error handling.

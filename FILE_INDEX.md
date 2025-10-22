@@ -23,8 +23,8 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `docs/design/draft-workspace.md` — Draft workspace interaction patterns (editing, approvals, inspector).
 - (future) `docs/api/` — tRPC routes, adapter contracts.
 
-## Source (`src/`)
 - `app/` — Next.js App Router entry points (`layout.tsx`, `page.tsx`, global styles).
+- `app/api/trpc/[trpc]/route.ts` — tRPC fetch handler exposing the application router.
 - `components/layout/` — Workspace shell primitives (sidebar, header, command menu, app shell).
 - `components/planning/` — Planning workspace components (section cards, editors).
 - `components/activity/` — Activity & undo timeline components.
@@ -40,7 +40,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
 - `hooks/use-discard-candidate.ts` — Mutation helper for tagging candidates as discarded during triage.
 - `hooks/use-exports.ts` — React Query helpers for export history, metrics, and enqueueing export jobs.
-- `hooks/use-research-plan.ts` — Load and optimistically persist research plans for the Planning workspace.
+- `hooks/use-projects.ts` — tRPC-powered project CRUD hooks with optimistic mutations.
 - `hooks/use-research-plan.ts` — Load, save, and generate research plan content (AI suggestions + optimistic persistence) for the Planning workspace.
 - `hooks/use-compose.ts` — Helpers for enqueuing compose jobs and polling job status.
 - `hooks/use-draft-sections.ts` — Fetch draft sections for the compose workspace and expose the `useUpdateDraftSection` mutation for saves/approvals.
@@ -56,6 +56,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `lib/ai/` — AI orchestration helpers (OpenAI client, triage rationale jobs, Ask-AI).
 - `lib/ai/plan-generator.ts` — Generates structured research plan suggestions with OpenAI fallbacks.
 - `lib/planning/` — Research plan defaults, normalization, and comparison helpers.
+- `lib/projects/serialize.ts` — Shared serializer normalizing project settings payloads.
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
 - `lib/navigation.ts` — Navigation metadata powering the shell.
 - `lib/metrics/prisma-flow.ts` — Aggregates PRISMA-style flow metrics (search totals, triage counts, ledger inclusions).
@@ -64,7 +65,8 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `lib/triage/status.ts` — Triage status enums and helpers for sanitizing state transitions.
 - `lib/export/` — Export jobs, adapters, storage helpers, PRISMA diagrams, and context builders.
 - `lib/export/status.ts` — Status display helpers for export lifecycle states.
-- `hooks/` — React Query hooks (projects CRUD, activity log, etc.).
+- `hooks/` — React Query hooks (activity log, triage, etc.).
+- `server/trpc/` — tRPC context, router definitions, and procedure composition helpers.
 - `scripts/` — Runtime scripts (`run-worker.ts`).
 - `stories/` — Storybook stories (design tokens, examples).
 - `styles/` — Storybook-specific styles (`storybook.css`).

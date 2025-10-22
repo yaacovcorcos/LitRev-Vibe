@@ -4,6 +4,12 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-22 — Project CRUD tRPC migration & UI edits
+- Introduced tRPC stack (router, context, app handler) and added `/api/trpc` endpoint using superjson for consistent serialization.
+- Replaced REST-based project hooks with tRPC-powered React Query mutations including optimistic create/update/delete flows and activity logging for lifecycle events.
+- Refreshed Projects workspace with inline editing, AI-friendly UX states, and error handling aligned to the new hooks.
+- Added unit coverage for the project router and adjusted accessibility tests to account for mocked hooks/provider setup.
+
 ### 2025-10-22 — AI Plan Generator & Planning UX Integration
 - Added `/api/projects/:id/planning/generate` endpoint to deliver AI-authored research plan suggestions with database/source recommendations and safe fallbacks.
 - Implemented `generateResearchPlanSuggestion` OpenAI helper with structured JSON parsing, rate limiting, and deterministic defaults when the model is unavailable.

@@ -1,131 +1,164 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { inferRouterOutputs } from "@trpc/server";
 
-import type { ProjectSettings, ProjectSettingsPatch } from "@/lib/projects/settings";
+import type { ProjectSettingsPatch } from "@/lib/projects/settings";
+import { DEFAULT_PROJECT_SETTINGS, resolveProjectSettings } from "@/lib/projects/settings";
+import { trpc } from "@/trpc/react";
 
-type Project = {
-  id: string;
-  name: string;
-  description: string | null;
-  createdAt: string;
-  updatedAt: string;
-  settings: ProjectSettings;
-};
+import type { AppRouter } from "@/server/trpc";
 
-const projectKeys = {
-  all: ['projects'] as const,
-  detail: (id?: string | null) => ['projects', id ?? 'unknown'] as const,
-};
-
-async function fetchProjects(): Promise<Project[]> {
-  const response = await fetch("/api/projects");
-
-  if (!response.ok) {
-    throw new Error("Failed to load projects");
-  }
-
-  return response.json();
-}
-
-async function fetchProject(id: string): Promise<Project> {
-  const response = await fetch(`/api/projects/${id}`);
-
-  if (!response.ok) {
-    throw new Error("Failed to load project");
-  }
-
-  return response.json();
-}
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+export type Project = RouterOutputs["project"]["list"][number];
 
 type ProjectInput = {
-  name: string;
+  name?: string;
   description?: string | null;
   settings?: ProjectSettingsPatch;
 };
 
 export function useProjects() {
-  return useQuery({
-    queryKey: projectKeys.all,
-    queryFn: fetchProjects,
-  });
+  return trpc.project.list.useQuery();
 }
 
 export function useProject(id: string | null) {
-  return useQuery({
-    queryKey: projectKeys.detail(id),
-    queryFn: () => fetchProject(id as string),
-    enabled: Boolean(id),
-  });
+  return trpc.project.byId.useQuery(
+    { id: id ?? "" },
+    { enabled: Boolean(id) },
+  );
 }
 
 export function useCreateProject() {
-  const queryClient = useQueryClient();
+  const utils = trpc.useUtils();
 
-  return useMutation({
-    mutationFn: async (input: ProjectInput) => {
-      const response = await fetch("/api/projects", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(input),
-      });
+  return trpc.project.create.useMutation({
+    onMutate: async (input) => {
+      await utils.project.list.cancel();
+      const previous = utils.project.list.getData();
 
-      if (!response.ok) {
-        throw new Error("Failed to create project");
+      const optimistic = {
+        id: `temp-${Date.now()}`,
+        name: input.name,
+        description: input.description ?? null,
+        settings: resolveProjectSettings(undefined),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } satisfies Project;
+
+      if (previous) {
+        utils.project.list.setData(undefined, [optimistic, ...previous]);
+      } else {
+        utils.project.list.setData(undefined, [optimistic]);
       }
 
-      return response.json() as Promise<Project>;
+      return { previous, optimisticId: optimistic.id };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.all });
+    onError: (_error, _input, context) => {
+      if (context?.previous) {
+        utils.project.list.setData(undefined, context.previous);
+      }
+    },
+    onSuccess: (project, _input, context) => {
+      utils.project.list.setData(undefined, (projects) => {
+        if (!projects) {
+          return [project];
+        }
+
+        return projects.map((item) =>
+          context?.optimisticId && item.id === context.optimisticId ? project : item,
+        );
+      });
+    },
+    onSettled: () => {
+      utils.project.list.invalidate();
     },
   });
 }
 
-export function useUpdateProject(id: string) {
-  const queryClient = useQueryClient();
+export function useUpdateProject() {
+  const utils = trpc.useUtils();
 
-  return useMutation({
-    mutationFn: async (input: ProjectInput) => {
-      const response = await fetch(`/api/projects/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(input),
+  return trpc.project.update.useMutation({
+    onMutate: async (input) => {
+      const { id } = input;
+
+      await Promise.all([
+        utils.project.list.cancel(),
+        utils.project.byId.cancel({ id }),
+      ]);
+
+      const previousList = utils.project.list.getData();
+      const previousDetail = utils.project.byId.getData({ id });
+
+      utils.project.list.setData(undefined, (projects) => {
+        if (!projects) {
+          return projects;
+        }
+
+        return projects.map((project) =>
+          project.id === id
+            ? {
+                ...project,
+                name: input.name ?? project.name,
+                description:
+                  input.description !== undefined ? input.description ?? null : project.description,
+                updatedAt: new Date(),
+              }
+            : project,
+        );
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update project");
+      if (previousDetail) {
+        utils.project.byId.setData({ id }, {
+          ...previousDetail,
+          name: input.name ?? previousDetail.name,
+          description:
+            input.description !== undefined ? input.description ?? null : previousDetail.description,
+          updatedAt: new Date(),
+        });
       }
 
-      return response.json() as Promise<Project>;
+      return { previousList, previousDetail, id };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.all });
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
+    onError: (_error, _input, context) => {
+      if (context?.previousList) {
+        utils.project.list.setData(undefined, context.previousList);
+      }
+      if (context?.previousDetail && context.id) {
+        utils.project.byId.setData({ id: context.id }, context.previousDetail);
+      }
+    },
+    onSettled: (_result, _variables, context) => {
+      utils.project.list.invalidate();
+      if (context?.id) {
+        utils.project.byId.invalidate({ id: context.id });
+      }
     },
   });
 }
 
 export function useDeleteProject() {
-  const queryClient = useQueryClient();
+  const utils = trpc.useUtils();
 
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/projects/${id}`, {
-        method: "DELETE",
-      });
+  return trpc.project.delete.useMutation({
+    onMutate: async ({ id }) => {
+      await utils.project.list.cancel();
 
-      if (!response.ok && response.status !== 204) {
-        throw new Error("Failed to delete project");
-      }
+      const previous = utils.project.list.getData();
+      utils.project.list.setData(undefined, (projects) =>
+        projects?.filter((project) => project.id !== id),
+      );
 
-      return id;
+      return { previous, id };
     },
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.all });
-      queryClient.removeQueries({ queryKey: projectKeys.detail(id) });
+    onError: (_error, _input, context) => {
+      if (context?.previous) {
+        utils.project.list.setData(undefined, context.previous);
+      }
+    },
+    onSettled: (_result, _variables, context) => {
+      utils.project.list.invalidate();
+      if (context?.id) {
+        utils.project.byId.invalidate({ id: context.id });
+      }
     },
   });
 }

@@ -3,8 +3,8 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { toInputJson } from "@/lib/prisma/json";
+import { serializeProject } from "@/lib/projects/serialize";
 import {
-  normalizeProjectSettings,
   projectSettingsPatchSchema,
   resolveProjectSettings,
 } from "@/lib/projects/settings";
@@ -14,21 +14,6 @@ const projectInputSchema = z.object({
   description: z.string().nullable().optional(),
   settings: projectSettingsPatchSchema.optional(),
 });
-
-function serializeProject(project: {
-  id: string;
-  name: string;
-  description: string | null;
-  settings: unknown;
-  createdAt: Date;
-  updatedAt: Date;
-}) {
-  return {
-    ...project,
-    description: project.description ?? null,
-    settings: normalizeProjectSettings(project.settings),
-  };
-}
 
 export async function GET() {
   const projects = await prisma.project.findMany({

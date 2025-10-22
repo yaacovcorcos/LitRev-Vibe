@@ -4,8 +4,8 @@ import { z } from "zod";
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { toInputJson } from "@/lib/prisma/json";
+import { serializeProject } from "@/lib/projects/serialize";
 import {
-  normalizeProjectSettings,
   projectSettingsPatchSchema,
   resolveProjectSettings,
 } from "@/lib/projects/settings";
@@ -21,21 +21,6 @@ type RouteParams = {
     id: string;
   };
 };
-
-function serializeProject(project: {
-  id: string;
-  name: string;
-  description: string | null;
-  settings: unknown;
-  createdAt: Date;
-  updatedAt: Date;
-}) {
-  return {
-    ...project,
-    description: project.description ?? null,
-    settings: normalizeProjectSettings(project.settings),
-  };
-}
 
 export async function GET(_request: Request, { params }: RouteParams) {
   const project = await prisma.project.findUnique({
