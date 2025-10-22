@@ -40,6 +40,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
 - `hooks/use-discard-candidate.ts` — Mutation helper for tagging candidates as discarded during triage.
 - `hooks/use-exports.ts` — React Query helpers for export history, metrics, and enqueueing export jobs.
+- `hooks/use-research-plan.ts` — Load and optimistically persist research plans for the Planning workspace.
 - `hooks/use-compose.ts` — Helpers for enqueuing compose jobs and polling job status.
 - `hooks/use-draft-sections.ts` — Fetch draft sections for the compose workspace and expose the `useUpdateDraftSection` mutation for saves/approvals.
 - `hooks/use-draft-suggestions.ts` — Manage AI suggestions (list, request, resolve) for draft sections.
@@ -52,6 +53,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `lib/jobs/` — Job persistence helpers bridging Prisma records with queue metadata.
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
 - `lib/ai/` — AI orchestration helpers (OpenAI client, triage rationale jobs, Ask-AI).
+- `lib/planning/` — Research plan defaults, normalization, and comparison helpers.
 - `lib/queue/` — Queue helpers (`redis.ts`, `queue.ts`, `worker.ts`).
 - `lib/navigation.ts` — Navigation metadata powering the shell.
 - `lib/metrics/prisma-flow.ts` — Aggregates PRISMA-style flow metrics (search totals, triage counts, ledger inclusions).

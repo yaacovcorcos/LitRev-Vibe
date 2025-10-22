@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import HomePage from "@/app/page";
 import ProjectsPage from "@/app/projects/page";
 import PlanningPage from "@/app/project/[id]/planning/page";
+import { EMPTY_PLAN_RESPONSE } from "@/lib/planning/plan";
 import { DEFAULT_PROJECT_SETTINGS } from "@/lib/projects/settings";
 
 const mockUsePathname = vi.fn();
@@ -81,6 +82,13 @@ const sampleProject = {
   updatedAt: new Date().toISOString(),
 };
 
+const samplePlan = {
+  ...EMPTY_PLAN_RESPONSE,
+  id: "plan-demo",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
 describe("Workspace shell accessibility", () => {
   test("Home route passes axe audit", async () => {
     mockUsePathname.mockReturnValue("/");
@@ -116,6 +124,7 @@ describe("Workspace shell accessibility", () => {
     mockUseParams.mockReturnValue({ id: "demo-project" });
     setupFetchMock({
       "/api/projects/demo-project": sampleProject,
+      "/api/projects/demo-project/planning": samplePlan,
     });
 
     const { container } = renderWithinShell(<PlanningPage />);

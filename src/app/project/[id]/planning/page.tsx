@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
 import { FileText, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,18 +13,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { PlanningSection } from "@/components/planning/section";
 import { useProject } from "@/hooks/use-projects";
+import {
+  useResearchPlan,
+  useSaveResearchPlan,
+} from "@/hooks/use-research-plan";
+import {
+  DEFAULT_PLAN,
+  extractPlanContent,
+  plansEqual,
+  type ResearchPlanContent,
+} from "@/lib/planning/plan";
 import { cn } from "@/lib/utils";
-
-const DEFAULT_PLAN = {
-  scope:
-    "Population: Adults with hypertension\nIntervention: Lifestyle modifications (diet, exercise, sleep)\nComparison: Standard of care\nOutcomes: Blood pressure reduction, cardiovascular risk markers\nTimeframe: Studies published in the last 10 years",
-  questions:
-    "- What lifestyle interventions have the strongest evidence for reducing systolic blood pressure?\n- How do combined diet + exercise programs compare to single-modality interventions?\n- What adherence strategies improve long-term outcomes?",
-  queryStrategy:
-    'Example Boolean string:\n("hypertension" OR "high blood pressure") AND ("lifestyle" OR "diet" OR "exercise")\n\nSources:\n- PubMed\n- Crossref\n- Unpaywall (OA PDFs)\n\nScreening notes: include RCTs, cohort studies, systematic reviews. Exclude pediatric populations.',
-  outline:
-    "1. Introduction\n   - Hypertension burden\n   - Rationale for lifestyle interventions\n2. Methods\n   - Research question (PICO)\n   - Search strategy & sources\n3. Results\n   - Intervention categories (diet, exercise, combined)\n   - Adherence findings\n4. Discussion\n   - Clinical implications\n   - Gaps & future research",
-};
 
 const FORM_SECTIONS = [
   {
@@ -52,8 +52,6 @@ const FORM_SECTIONS = [
   },
 ] as const;
 
-type PlanState = typeof DEFAULT_PLAN;
-
 export default function PlanningPage() {
   const params = useParams<{ id: string }>();
   const projectId = params?.id;
@@ -62,15 +60,27 @@ export default function PlanningPage() {
     projectId ?? null,
   );
 
-  const [plan, setPlan] = useState<PlanState>(DEFAULT_PLAN);
+  const {
+    data: planData,
+    isLoading: planLoading,
+    isFetching: planFetching,
+  } = useResearchPlan(projectId ?? null);
+  const savePlanMutation = useSaveResearchPlan(projectId ?? null);
+
+  const [plan, setPlan] = useState<ResearchPlanContent>(DEFAULT_PLAN);
 
   useEffect(() => {
-    // Future: hydrate plan from persisted data when available.
-    setPlan(DEFAULT_PLAN);
-  }, [projectId]);
+    if (!planData) {
+      return;
+    }
+
+    const remotePlan = extractPlanContent(planData);
+    setPlan((current) => (plansEqual(current, remotePlan) ? current : remotePlan));
+  }, [planData]);
 
   const handleChange =
-    (field: keyof PlanState) => (event: ChangeEvent<HTMLTextAreaElement>) => {
+    (field: keyof ResearchPlanContent) =>
+    (event: ChangeEvent<HTMLTextAreaElement>) => {
       const value = event.target.value;
       setPlan((prev) => ({ ...prev, [field]: value }));
     };
@@ -81,6 +91,34 @@ export default function PlanningPage() {
     }
     return project?.name ?? "Untitled project";
   }, [project, projectLoading]);
+
+  const comparisonPlan = useMemo(
+    () => (planData ? extractPlanContent(planData) : DEFAULT_PLAN),
+    [planData],
+  );
+  const hasUnsavedChanges = useMemo(
+    () => !plansEqual(plan, comparisonPlan),
+    [plan, comparisonPlan],
+  );
+  const isSaving = savePlanMutation.isPending;
+  const saveError = savePlanMutation.error;
+  const saveDisabled =
+    !projectId || isSaving || planLoading || !hasUnsavedChanges;
+  const lastSavedLabel = useMemo(() => {
+    if (!planData?.updatedAt) {
+      return null;
+    }
+    return formatDistanceToNow(new Date(planData.updatedAt), {
+      addSuffix: true,
+    });
+  }, [planData?.updatedAt]);
+
+  const handleSave = () => {
+    if (!projectId) {
+      return;
+    }
+    savePlanMutation.mutate(plan);
+  };
 
   return (
     <div className="space-y-8">
@@ -115,11 +153,44 @@ export default function PlanningPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" disabled>
-              Save draft (coming soon)
+            <Button
+              variant="outline"
+              disabled={saveDisabled}
+              onClick={handleSave}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : hasUnsavedChanges ? (
+                "Save draft"
+              ) : (
+                "Saved"
+              )}
             </Button>
             <Button disabled>Run search (coming soon)</Button>
           </div>
+          {savePlanMutation.isError ? (
+            <p
+              className="text-xs text-destructive"
+              role="alert"
+              aria-live="assertive"
+            >
+              {saveError?.message ?? "We couldn't save your plan. Please try again."}
+            </p>
+          ) : null}
+          {planFetching || isSaving || lastSavedLabel ? (
+            <p className="text-xs text-muted-foreground" aria-live="polite">
+              {isSaving
+                ? "Saving changes…"
+                : planFetching
+                  ? "Syncing latest plan…"
+                  : lastSavedLabel
+                    ? `Last saved ${lastSavedLabel}`
+                    : null}
+            </p>
+          ) : null}
         </div>
       </header>
 
@@ -142,6 +213,7 @@ export default function PlanningPage() {
               id={`planning-${section.key}`}
               value={plan[section.key]}
               onChange={handleChange(section.key)}
+              disabled={planLoading}
               className={cn(
                 "min-h-[200px] whitespace-pre-wrap bg-background",
                 "font-mono text-sm"
