@@ -59,6 +59,7 @@
   "dependencies": {
     "@prisma/client": "^6.17.1",
     "@radix-ui/react-alert-dialog": "^1.1.15",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
@@ -70,6 +71,7 @@
     "bullmq": "^5.61.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "docx": "9.0.3",
     "ioredis": "^5.8.1",

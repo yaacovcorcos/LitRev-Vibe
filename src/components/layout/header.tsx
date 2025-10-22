@@ -43,6 +43,12 @@ function CommandTrigger() {
         "hidden items-center justify-between gap-2 rounded-md border border-input px-3 py-2 text-sm text-muted-foreground transition hover:text-foreground focus:ring-1 lg:flex"
       )}
       aria-label="Open command palette"
+      type="button"
+      onClick={() => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("litrev:command-open"));
+        }
+      }}
     >
       <span>Search or jump to…</span>
       <kbd className="flex items-center gap-1 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
