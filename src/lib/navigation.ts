@@ -41,3 +41,40 @@ export const workspaceNav: NavSection[] = [
     ],
   },
 ];
+
+export function navItemRequiresProject(item: NavItem) {
+  return item.href.includes('/:id');
+}
+
+export function resolveProjectHref(href: string, projectId: string | null | undefined) {
+  if (!href.includes('/:id')) {
+    return href;
+  }
+
+  if (!projectId) {
+    return null;
+  }
+
+  return href.replace('/:id', `/${projectId}`);
+}
+
+export function extractProjectId(pathname: string | null) {
+  if (!pathname) {
+    return null;
+  }
+
+  const match = pathname.match(/\/project\/([^/]+)/);
+  return match ? match[1] : null;
+}
+
+export function isActiveNavPath(pathname: string, target: string) {
+  if (target === '/') {
+    return pathname === '/';
+  }
+
+  if (pathname === target) {
+    return true;
+  }
+
+  return pathname.startsWith(`${target}/`);
+}
