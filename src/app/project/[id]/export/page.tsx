@@ -526,7 +526,12 @@ type Manifest = {
 };
 
 function parseManifest(options: Record<string, unknown>) {
+  const isProd = process.env.NODE_ENV === "production";
+
   if (!options || typeof options !== "object") {
+    if (!isProd) {
+      console.warn("export: manifest options missing or invalid", options);
+    }
     return null;
   }
 
@@ -534,10 +539,17 @@ function parseManifest(options: Record<string, unknown>) {
   const files = Array.isArray(manifest.files) ? manifest.files : undefined;
 
   if (!files) {
+    if (!isProd) {
+      console.warn("export: manifest missing files array", options);
+    }
     return null;
   }
 
   const normalized = files.filter((file): file is Manifest["files"][number] => Boolean(file?.name));
+
+  if (normalized.length === 0 && !isProd) {
+    console.warn("export: manifest contains zero files", options);
+  }
 
   return normalized.length > 0 ? { files: normalized } : null;
 }
