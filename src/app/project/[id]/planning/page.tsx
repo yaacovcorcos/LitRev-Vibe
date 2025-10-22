@@ -4,7 +4,7 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { useProject } from "@/hooks/use-projects";
 import {
   useResearchPlan,
   useSaveResearchPlan,
+  useGenerateResearchPlan,
 } from "@/hooks/use-research-plan";
 import {
   DEFAULT_PLAN,
@@ -23,6 +24,7 @@ import {
   plansEqual,
   type ResearchPlanContent,
 } from "@/lib/planning/plan";
+import type { GeneratedPlanSuggestion } from "@/lib/ai/plan-generator";
 import { cn } from "@/lib/utils";
 
 const FORM_SECTIONS = [
@@ -66,8 +68,10 @@ export default function PlanningPage() {
     isFetching: planFetching,
   } = useResearchPlan(projectId ?? null);
   const savePlanMutation = useSaveResearchPlan(projectId ?? null);
+  const generatePlanMutation = useGenerateResearchPlan(projectId ?? null);
 
   const [plan, setPlan] = useState<ResearchPlanContent>(DEFAULT_PLAN);
+  const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlanSuggestion | null>(null);
 
   useEffect(() => {
     if (!planData) {
@@ -102,6 +106,8 @@ export default function PlanningPage() {
   );
   const isSaving = savePlanMutation.isPending;
   const saveError = savePlanMutation.error;
+  const isGenerating = generatePlanMutation.isPending;
+  const generationError = generatePlanMutation.error;
   const saveDisabled =
     !projectId || isSaving || planLoading || !hasUnsavedChanges;
   const lastSavedLabel = useMemo(() => {
@@ -118,6 +124,34 @@ export default function PlanningPage() {
       return;
     }
     savePlanMutation.mutate(plan);
+  };
+
+  const handleGeneratePlan = () => {
+    if (!projectId) {
+      return;
+    }
+
+    setGeneratedPlan(null);
+    generatePlanMutation.mutate({ plan });
+  };
+
+  useEffect(() => {
+    if (generatePlanMutation.status === "success" && generatePlanMutation.data) {
+      setGeneratedPlan(generatePlanMutation.data);
+    }
+  }, [generatePlanMutation.status, generatePlanMutation.data]);
+
+  useEffect(() => {
+    setGeneratedPlan(null);
+  }, [projectId]);
+
+  const handleApplyGeneratedPlan = () => {
+    if (!generatedPlan) {
+      return;
+    }
+
+    const { scope, questions, queryStrategy, outline } = generatedPlan;
+    setPlan({ scope, questions, queryStrategy, outline });
   };
 
   return (
@@ -170,6 +204,23 @@ export default function PlanningPage() {
               )}
             </Button>
             <Button disabled>Run search (coming soon)</Button>
+            <Button
+              variant="secondary"
+              onClick={handleGeneratePlan}
+              disabled={isGenerating || !projectId}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate with AI
+                </>
+              )}
+            </Button>
           </div>
           {savePlanMutation.isError ? (
             <p
@@ -178,6 +229,11 @@ export default function PlanningPage() {
               aria-live="assertive"
             >
               {saveError?.message ?? "We couldn't save your plan. Please try again."}
+            </p>
+          ) : null}
+          {generationError ? (
+            <p className="text-xs text-destructive" role="alert" aria-live="assertive">
+              {generationError.message}
             </p>
           ) : null}
           {planFetching || isSaving || lastSavedLabel ? (
@@ -195,6 +251,58 @@ export default function PlanningPage() {
       </header>
 
       <Separator />
+
+      {generatedPlan ? (
+        <section className="space-y-4 rounded-lg border bg-background p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">AI-generated suggestion</h2>
+              {generatedPlan.rationale ? (
+                <p className="mt-1 text-sm text-muted-foreground">{generatedPlan.rationale}</p>
+              ) : null}
+              {generatedPlan.targetSources.length > 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Suggested sources: {generatedPlan.targetSources.join(", ")}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button variant="default" onClick={handleApplyGeneratedPlan}>
+                Apply to form
+              </Button>
+              <Button variant="ghost" onClick={() => setGeneratedPlan(null)}>
+                Dismiss
+              </Button>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Scope & PICO
+              </Label>
+              <Textarea value={generatedPlan.scope} readOnly className="min-h-[160px] bg-muted/40 font-mono text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Key Questions
+              </Label>
+              <Textarea value={generatedPlan.questions} readOnly className="min-h-[160px] bg-muted/40 font-mono text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Query Strategy
+              </Label>
+              <Textarea value={generatedPlan.queryStrategy} readOnly className="min-h-[160px] bg-muted/40 font-mono text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Draft Outline
+              </Label>
+              <Textarea value={generatedPlan.outline} readOnly className="min-h-[160px] bg-muted/40 font-mono text-sm" />
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-6 md:grid-cols-2">
         {FORM_SECTIONS.map((section) => (

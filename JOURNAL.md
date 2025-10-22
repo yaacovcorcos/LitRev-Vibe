@@ -4,6 +4,12 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-22 — AI Plan Generator & Planning UX Integration
+- Added `/api/projects/:id/planning/generate` endpoint to deliver AI-authored research plan suggestions with database/source recommendations and safe fallbacks.
+- Implemented `generateResearchPlanSuggestion` OpenAI helper with structured JSON parsing, rate limiting, and deterministic defaults when the model is unavailable.
+- Enhanced the Planning workspace with an "Generate with AI" control, preview panel, and apply flow that keeps optimistic saves/error messaging accessible.
+- Introduced React Query mutations and Vitest coverage for the endpoint to ensure the new workflow remains stable.
+
 ### 2025-10-22 — Research Plan Persistence & Planning UX Save Flow
 - Created `/api/projects/:id/planning` GET/PUT endpoints that normalize research plan text, enforce per-project uniqueness, and hydrate defaults when no record exists.
 - Added Prisma migration extending `ResearchPlan` (optional `questions`, unique `projectId`) and utility helpers for serializing plan content.
