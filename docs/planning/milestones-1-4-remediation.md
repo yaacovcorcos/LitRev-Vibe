@@ -25,10 +25,10 @@ Detailed backlog of fixes and enhancements needed to close the remaining gaps fo
 
 ## Milestone 2 — Search Stack
 
-- [ ] **Complete the Crossref search adapter**
-  - Implementation: Build out `src/lib/search/adapters/crossref.ts` with real HTTP integration, rate limiting, and metadata normalization matching `SearchResult`.
-  - Validation: Add unit tests (e.g., mocked fetch) covering pagination and metadata mapping; run existing search job tests.
-  - Documentation: Update `docs/api/search.md` (or create if missing) describing adapter coverage and Crossref requirements.
+- [x] **Complete the Crossref search adapter**
+  - Implementation: `src/lib/search/adapters/crossref.ts` now queries Crossref’s `/works` endpoint with rate limiting, paging, filter support, and normalized metadata output.
+  - Validation: Added `src/lib/search/adapters/crossref.test.ts` with mocked responses plus full `pnpm test` run.
+  - Documentation: Added `docs/api/search.md` outlining adapter coverage and Crossref-specific requirements.
 
 - [ ] **Support multi-adapter execution from the triage UI**
   - Implementation: Allow adapter selection in `src/app/project/[id]/triage/page.tsx` (persist choice per project), pass selected adapters through `useEnqueueSearch` to `enqueueSearchJob`.
@@ -86,4 +86,3 @@ Detailed backlog of fixes and enhancements needed to close the remaining gaps fo
   - Implementation: Delete `docs/planning/milestones-1-4-remediation.md`.
   - Validation: Confirm all tasks are closed in tracking system before removal.
   - Documentation: Note the document removal in the release journal (`JOURNAL.md`) for audit purposes.
-

@@ -18,11 +18,14 @@ Quick reference for navigating the repository. Update this index whenever new to
 ## Docs
 - `docs/specs/` — Product specification, homepage description, routing decisions.
 - `docs/planning/` — Implementation plans (`v1`, `v2`), roadmap details.
-- `docs/development/` — Testing strategy, workflows (skeleton).
+- `docs/development/` — Testing strategy, workflows, and onboarding aids.
+- `docs/development/onboarding-guide.md` — Step-by-step environment + workflow walkthrough for the Milestone 1 slice.
 - `docs/reviews/` — QA artifacts and responsive reviews (e.g., `2025-10-15-triage-ledger-cross-device.md`).
 - `docs/design/draft-workspace.md` — Draft workspace interaction patterns (editing, approvals, inspector).
 - `docs/design/design-qa-checklist.md` — Visual regression and accessibility checklist for shell changes.
-- (future) `docs/api/` — tRPC routes, adapter contracts.
+- `docs/api/ADAPTERS.md` — Adapter interfaces shared across automation subsystems.
+- `docs/api/TRPC_ROUTES.md` — High-level index of tRPC procedures.
+- `docs/api/search.md` — Search adapter contract, rate limits, and implementation notes for PubMed/Crossref.
 
 - `app/` — Next.js App Router entry points (`layout.tsx`, `page.tsx`, global styles).
 - `app/api/trpc/[trpc]/route.ts` — tRPC fetch handler exposing the application router.
