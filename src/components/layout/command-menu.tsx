@@ -88,11 +88,7 @@ export function CommandMenu() {
                     <CommandItem
                       key={item.id}
                       value={`${item.title} ${item.section}`}
-                      onSelect={() => {
-                        if (!item.disabled) {
-                          handleSelect(item);
-                        }
-                      }}
+                      onSelect={() => handleSelect(item)}
                       disabled={item.disabled}
                     >
                       <Icon className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -154,17 +150,19 @@ function flattenNav(
 }
 
 function groupBySection(items: PaletteItem[]) {
-  return items.reduce<
-    Array<{ section: string; items: PaletteItem[] }>
-  >((groups, item) => {
-    const existing = groups.find((group) => group.section === item.section);
-    if (existing) {
-      existing.items.push(item);
-    } else {
-      groups.push({ section: item.section, items: [item] });
+  const groups = new Map<string, PaletteItem[]>();
+
+  for (const item of items) {
+    if (!groups.has(item.section)) {
+      groups.set(item.section, []);
     }
-    return groups;
-  }, []);
+    groups.get(item.section)!.push(item);
+  }
+
+  return Array.from(groups.entries()).map(([section, sectionItems]) => ({
+    section,
+    items: sectionItems,
+  }));
 }
 
 function resolveProjectHref(href: string, projectId: string | null) {
