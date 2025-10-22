@@ -367,6 +367,7 @@ function HistoryItem({ projectId, item }: { projectId: string | null; item: Expo
   const downloadUrl = item.status === "completed" && projectId
     ? `/api/projects/${projectId}/exports/${item.id}/download`
     : null;
+  const manifest = parseManifest(item.options);
 
   return (
     <li className="rounded-lg border border-border bg-card p-4 shadow-sm">
@@ -384,7 +385,7 @@ function HistoryItem({ projectId, item }: { projectId: string | null; item: Expo
           {downloadUrl ? (
             <Button asChild size="sm">
               <Link href={downloadUrl} prefetch={false}>
-                <ArrowDownToLine className="mr-2 h-4 w-4" /> Download
+                <ArrowDownToLine className="mr-2 h-4 w-4" /> Download bundle
               </Link>
             </Button>
           ) : null}
@@ -410,6 +411,21 @@ function HistoryItem({ projectId, item }: { projectId: string | null; item: Expo
           <span>{renderErrorMessage(item.error)}</span>
         </p>
       ) : null}
+      {manifest && manifest.files.length > 0 ? (
+        <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">Bundle contents</p>
+          <ul className="space-y-1">
+            {manifest.files.map((file) => (
+              <li key={file.name} className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                  {file.contentType}
+                </Badge>
+                <span className="text-muted-foreground/80">{file.name}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </li>
   );
 }
@@ -433,6 +449,19 @@ function renderErrorMessage(value: unknown) {
   }
 
   return "Export failed.";
+}
+
+type Manifest = {
+  files: Array<{ name: string; contentType: string }>;
+};
+
+function parseManifest(options: Record<string, unknown>) {
+  if (!options || typeof options !== "object") {
+    return null;
+  }
+
+  const files = Array.isArray((options as Manifest).files) ? (options as Manifest).files : [];
+  return files.length > 0 ? { files } : null;
 }
 
 function HistorySkeleton() {
