@@ -80,6 +80,35 @@ In CI, the same script runs via [`.github/workflows/ci.yml`](.github/workflows/c
 4. Run Storybook: `pnpm run storybook` (optional)
 5. Run Playwright checks (optional): `pnpm run playwright:test` *(uses mock Redis in test harness; add `--grep @visual` to include design QA snapshots)*
 
+## Milestone 1 Guided Flow (Planning → Triage → Ledger)
+
+Walk the current MVP slice end-to-end with the seeded tooling:
+
+1. **Create a project**  
+   - Navigate to `/projects` and use the “New Project” card.  
+   - tRPC-powered CRUD records the project and emits activity log entries for auditability.
+
+2. **Author the research plan**  
+   - Visit `/project/{id}/planning`.  
+   - Edit scope, questions, query strategy, and outline, then click “Save draft” to persist to the `ResearchPlan` record.  
+   - The “Generate with AI” button calls the OpenAI-backed plan generator (requires `OPENAI_API_KEY`) and lets you apply the suggestion into the editable form before saving.
+
+3. **Search and triage candidates**  
+   - Open `/project/{id}/triage`.  
+   - Enter Boolean terms and submit to enqueue a search job (Redis must be available for background workers).  
+   - Review candidates, inspect integrity flags, use Ask-AI, and “Keep to ledger” only after providing locator details—enforcing the “no claim without a locator” rule.
+
+4. **Review evidence in the ledger**  
+   - Head to `/project/{id}/ledger` to inspect kept references, provenance, integrity notes, and locator coverage.  
+   - Add supplemental locators or mark entries as verified; locator status badges feed compose/export validation in later milestones.
+
+5. **Monitor automation surfaces**  
+   - `/runs` tracks job progress for search, triage rationale, and compose tasks.  
+   - `/project/{id}/activity` lists every action for reproducibility.  
+   - `/notifications` currently hosts a placeholder describing the upcoming alert centre and links back to Runs while notification feeds are in development.
+
+Environment setup tips (Redis, Postgres, OpenAI, Unpaywall) and manual test data seeding notes live in the [development onboarding guide](docs/development/onboarding-guide.md).
+
 ## Application Development
 
 - Start the Next.js dev server: `pnpm run dev`.

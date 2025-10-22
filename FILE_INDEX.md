@@ -19,6 +19,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `docs/specs/` — Product specification, homepage description, routing decisions.
 - `docs/planning/` — Implementation plans (`v1`, `v2`), roadmap details.
 - `docs/development/` — Testing strategy, workflows (skeleton).
+- `docs/development/onboarding-guide.md` — Step-by-step environment + workflow walkthrough for the Milestone 1 slice.
 - `docs/reviews/` — QA artifacts and responsive reviews (e.g., `2025-10-15-triage-ledger-cross-device.md`).
 - `docs/design/draft-workspace.md` — Draft workspace interaction patterns (editing, approvals, inspector).
 - `docs/design/design-qa-checklist.md` — Visual regression and accessibility checklist for shell changes.
