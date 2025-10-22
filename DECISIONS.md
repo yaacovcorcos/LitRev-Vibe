@@ -23,3 +23,8 @@ Document pivotal architectural or product choices. For each entry, capture the c
 - **Context:** Compose retries could duplicate draft sections when BullMQ reruns a job after partial completion.
 - **Decision:** Persist per-version snapshots in `DraftSectionVersion`, rehydrate resumable state from job records, and reuse existing draft IDs when a section restarts.
 - **Consequences:** Compose jobs become idempotent across retries; rollback APIs and UI can restore earlier versions without data loss.
+
+### 2025-10-17 — Persist Research Plan as Single JSON Document
+- **Context:** The planning workspace needed durable storage before layering optimistic saves, AI plan generation, and activity logging.
+- **Decision:** Store each project's research plan as a single `ResearchPlan` record keyed by `projectId`, keeping editable sections (scope, questions, query strategy, outline) as JSON but exposing text payloads via the API.
+- **Consequences:** Planning UI can hydrate/sync with one endpoint, optimistic mutations stay simple, and future AI/autosave features can enrich the same record without schema sprawl.

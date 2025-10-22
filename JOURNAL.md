@@ -4,6 +4,12 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-22 — Research Plan Persistence & Planning UX Save Flow
+- Created `/api/projects/:id/planning` GET/PUT endpoints that normalize research plan text, enforce per-project uniqueness, and hydrate defaults when no record exists.
+- Added Prisma migration extending `ResearchPlan` (optional `questions`, unique `projectId`) and utility helpers for serializing plan content.
+- Wired the Planning workspace to load/sync plans via new React Query hooks with optimistic saves, status messaging, and accessibility-safe disabled states.
+- Extended shell accessibility tests to cover persisted planning data.
+
 ### 2025-10-16 — Compose API & Hooks
 - Added `/api/projects/:id/compose` endpoint to enqueue literature review jobs with validation and project guardrails, plus `/api/projects/:id/jobs/:jobId` for polling status.
 - Created React Query hooks for enqueuing compose jobs and polling job records, laying groundwork for the Draft workspace integration.
