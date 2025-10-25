@@ -46,19 +46,22 @@ export default function TriagePage() {
       return;
     }
 
+    const defaultSelection = adapterOptions.map((option) => option.id);
     const stored = window.localStorage.getItem(`${STORAGE_KEY_PREFIX}.${projectId}`);
+
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
           setSelectedAdapters(parsed);
+          return;
         }
       } catch {
-        setSelectedAdapters(adapterOptions.map((option) => option.id));
+        // fall through to default selection when parsing fails
       }
-    } else {
-      setSelectedAdapters(adapterOptions.map((option) => option.id));
     }
+
+    setSelectedAdapters(defaultSelection);
   }, [projectId]);
 
   useEffect(() => {

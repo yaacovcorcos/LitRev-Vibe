@@ -14,6 +14,8 @@ import type { SearchResult } from "@/lib/search";
 import { cn } from "@/lib/utils";
 import { useKeepCandidate } from "@/hooks/use-keep-candidate";
 import { useSnippetExtraction } from "@/hooks/use-snippet-extraction";
+import { useDiscardCandidate } from "@/hooks/use-discard-candidate";
+import { useNeedsReviewCandidate } from "@/hooks/use-needs-review-candidate";
 
 const FALLBACK_QUESTION = "Does this evidence align with our inclusion criteria?";
 
@@ -117,6 +119,7 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
   const integrityFlags = parseIntegrityFlags(candidate.integrityFlags ?? undefined);
   const triageStatus = typeof candidate.triageStatus === "string" ? candidate.triageStatus.toLowerCase() : "";
   const isPending = triageStatus === "pending";
+  const triageStatusLabel = formatTriageStatus(triageStatus);
 
   const { data: rationaleData, isLoading: rationaleLoading, isError: rationaleError } = useCandidateRationale(
     projectId,
@@ -126,6 +129,8 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
   const askMutation = useAskCandidateAI(projectId, candidate.id);
   const keepMutation = useKeepCandidate(projectId);
   const snippetMutation = useSnippetExtraction();
+  const discardMutation = useDiscardCandidate();
+  const needsReviewMutation = useNeedsReviewCandidate();
 
   const [question, setQuestion] = useState(FALLBACK_QUESTION);
   const [askResponse, setAskResponse] = useState<AskAiResponse | null>(null);
@@ -140,6 +145,53 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
   });
   const [locatorError, setLocatorError] = useState<string | null>(null);
   const [snippetMessage, setSnippetMessage] = useState<string | null>(null);
+  const [triageNote, setTriageNote] = useState("");
+  const [triageError, setTriageError] = useState<string | null>(null);
+  const [triageFeedback, setTriageFeedback] = useState<string | null>(null);
+
+  const triageActionPending = discardMutation.isPending || needsReviewMutation.isPending;
+
+  const handleNeedsReview = async () => {
+    if (!projectId || !isPending) {
+      return;
+    }
+
+    try {
+      setTriageError(null);
+      setTriageFeedback(null);
+      const note = triageNote.trim();
+      await needsReviewMutation.mutateAsync({
+        projectId,
+        candidateId: candidate.id,
+        note: note ? note : undefined,
+      });
+      setTriageFeedback("Marked as needs review.");
+      setTriageNote("");
+    } catch (error) {
+      setTriageError(error instanceof Error ? error.message : "Failed to update candidate.");
+    }
+  };
+
+  const handleDiscard = async () => {
+    if (!projectId || !isPending) {
+      return;
+    }
+
+    try {
+      setTriageError(null);
+      setTriageFeedback(null);
+      const note = triageNote.trim();
+      await discardMutation.mutateAsync({
+        projectId,
+        candidateId: candidate.id,
+        reason: note ? note : undefined,
+      });
+      setTriageFeedback("Discarded candidate.");
+      setTriageNote("");
+    } catch (error) {
+      setTriageError(error instanceof Error ? error.message : "Failed to update candidate.");
+    }
+  };
 
   const handleAsk = async () => {
     const cleanQuestion = question.trim();
@@ -257,11 +309,11 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
   };
 
   return (
-    <Card className={cn("border-muted-foreground/20 shadow-sm", className)}>
+    <Card data-testid="candidate-card" className={cn("border-muted-foreground/20 shadow-sm", className)}>
       <CardHeader className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary" className="capitalize">
-            {candidate.triageStatus.toLowerCase()}
+            {triageStatusLabel}
           </Badge>
           <Badge variant="outline" className="uppercase text-xs tracking-wide">
             {candidate.searchAdapter}
@@ -540,9 +592,54 @@ export function CandidateCard({ projectId, candidate, className }: CandidateCard
               </>
             ) : (
               <div className="rounded-md border border-muted-foreground/40 bg-muted/40 p-3 text-xs text-muted-foreground">
-                Already kept. Review locators, integrity notes, and provenance in the Evidence Ledger.
+                {triageStatus === "needs_review"
+                  ? "Marked for review. Update the candidate once questions are resolved."
+                  : "Status no longer pending. Review locators, integrity notes, and provenance in the Evidence Ledger."}
               </div>
             )}
+            <div className="space-y-2 rounded-md border border-muted-foreground/30 bg-muted/20 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Triage status</p>
+              {isPending ? (
+                <>
+                  <Label htmlFor={`${candidate.id}-triage-note`} className="text-xs font-medium text-muted-foreground">
+                    Optional note
+                  </Label>
+                  <Textarea
+                    id={`${candidate.id}-triage-note`}
+                    rows={2}
+                    value={triageNote}
+                    onChange={(event) => setTriageNote(event.target.value)}
+                    className="text-sm"
+                    disabled={triageActionPending}
+                    data-testid={`${candidate.id}-triage-note-input`}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={triageActionPending}
+                      onClick={handleNeedsReview}
+                    >
+                      {needsReviewMutation.isPending ? "Marking…" : "Needs review"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      disabled={triageActionPending}
+                      onClick={handleDiscard}
+                    >
+                      {discardMutation.isPending ? "Discarding…" : "Discard"}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">Status is {triageStatusLabel}. Use the ledger to manage follow-up.</p>
+              )}
+              {triageError ? <p className="text-xs text-destructive">{triageError}</p> : null}
+              {triageFeedback ? <p className="text-xs text-emerald-600">{triageFeedback}</p> : null}
+            </div>
           </div>
         </div>
       </CardFooter>
@@ -575,4 +672,12 @@ function LocatorInput({ id, label, value, disabled, onChange }: LocatorInputProp
       />
     </div>
   );
+}
+
+function formatTriageStatus(status: string) {
+  if (!status) {
+    return "pending";
+  }
+
+  return status.replace(/_/g, " ");
 }

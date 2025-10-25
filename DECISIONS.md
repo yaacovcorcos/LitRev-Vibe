@@ -43,3 +43,23 @@ Document pivotal architectural or product choices. For each entry, capture the c
 - **Context:** The workspace sidebar needed to direct users into project-scoped routes using the currently active project without forcing manual URL editing.
 - **Decision:** Derive the active project ID from the pathname in `Sidebar`, resolve `/project/:id/*` links through helpers in `src/lib/navigation.ts`, and disable project-scoped items when no project context exists.
 - **Consequences:** Navigation stays context-aware across planning, draft, export, and settings surfaces, preventing broken links and clarifying state when no project is selected; regression coverage was added to guarantee routing behavior.
+
+### 2025-10-25 — Multi-Adapter Triage Execution
+- **Context:** Search jobs needed to query multiple providers in one batch while preserving provenance for downstream ledger records.
+- **Decision:** Added adapter toggle tray to the triage UI with per-project persistence; search payloads now include the adapter array and telemetry logs it for auditing.
+- **Consequences:** Users can blend Crossref/PubMed (and future adapters) in one run, and ledger entries retain adapter metadata for reproducibility.
+
+### 2025-10-25 — PDF Artifact Ingestion Pipeline
+- **Context:** Open access PDFs must be captured automatically to power Ask-AI, locator extraction, and compose prompts.
+- **Decision:** Search persistence enqueues `pdf:ingest` jobs that download artifacts, extract text via `pdf-parse`, store them under `src/lib/storage/pdf.ts`, and update candidate metadata with locator snippets.
+- **Consequences:** Subsequent workflows have consistent source text; failures stay isolated to individual ingest jobs without blocking search completion.
+
+### 2025-10-25 — Curator Return Loop & Locator Checklist
+- **Context:** Curators needed a controlled way to send ledger entries back to triage and ensure locator completeness before verification.
+- **Decision:** Introduced `/ledger/:entryId/return` endpoint for transactional rollback and surfaced locator readiness checklist/toast guards in the inspector.
+- **Consequences:** Ledger integrity remains high, activity logs capture full history, and compose/export operations stay aligned with locator policy.
+
+### 2025-10-25 — AI Compose & Suggestion Generators
+- **Context:** Draft sections required model-generated prose while giving reviewers transparent diffs for manual sections.
+- **Decision:** Implemented OpenAI-backed compose and suggestion generators with structured JSON contracts and deterministic fallbacks; both record version snapshots including locator metadata.
+- **Consequences:** Draft automation produces citation-aware prose with rollbackable history, and reviewers can accept/dismiss improvements with clear before/after context.

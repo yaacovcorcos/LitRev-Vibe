@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-const ledgerKeys = {
+export const ledgerKeys = {
   list: (projectId: string, page: number, pageSize: number) => ["ledger", projectId, page, pageSize] as const,
 };
 
@@ -17,6 +17,7 @@ export type LedgerEntry = {
   verifiedByHuman: boolean;
   createdAt: string;
   updatedAt: string;
+  candidateId?: string | null;
 };
 
 type LedgerResponse = {

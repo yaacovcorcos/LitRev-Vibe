@@ -24,6 +24,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
         version: version.version,
         status: version.status,
         createdAt: version.createdAt,
+        content: version.content,
+        locators: version.locators,
       })),
     });
   } catch (error) {

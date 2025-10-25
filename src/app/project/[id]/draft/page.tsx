@@ -103,7 +103,20 @@ export default function DraftPage() {
   }, [ledgerData]);
 
   const isComposeDisabled = verifiedLedgerIds.length === 0 || composeMutation.isPending;
-  const isRollbackDisabled = rollbackMutation.isPending || !versionsQuery.data?.versions?.length;
+  const versionPreviews = useMemo(() => {
+    if (!activeSection) {
+      return [];
+    }
+
+    const versions = versionsQuery.data?.versions ?? [];
+    return buildVersionPreviews(versions, activeSection.content ?? null, activeSection.version ?? null);
+  }, [versionsQuery.data?.versions, activeSection]);
+
+  const latestRestorableVersion = useMemo(() => {
+    return versionPreviews.find((preview) => !preview.isCurrent) ?? null;
+  }, [versionPreviews]);
+
+  const isRollbackDisabled = rollbackMutation.isPending || !latestRestorableVersion;
 
   const handleCompose = () => {
     if (!projectId) {
@@ -470,7 +483,8 @@ export default function DraftPage() {
                     variant="outline"
                     size="sm"
                     disabled={isRollbackDisabled || !activeSection}
-                    onClick={() => handleRollback(versionsQuery.data?.versions?.[0]?.version ?? null)}
+                    data-target-version={latestRestorableVersion?.version ?? ""}
+                    onClick={() => handleRollback(latestRestorableVersion?.version ?? null)}
                   >
                     {rollbackMutation.isPending ? (
                       <span className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Rolling back…</span>
@@ -484,26 +498,51 @@ export default function DraftPage() {
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
                   </div>
-                ) : versionsQuery.data && versionsQuery.data.versions.length > 0 ? (
+                ) : versionPreviews.length > 0 ? (
                   <ul className="space-y-2 text-xs text-muted-foreground">
-                    {versionsQuery.data.versions.map((version) => (
-                      <li key={version.id} className="flex items-center justify-between gap-3 rounded border border-border bg-background px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <Clock3 className="h-3 w-3" />
-                          <span className="font-medium">v{version.version}</span>
-                          <Badge variant="outline">{version.status}</Badge>
+                    {versionPreviews.map((preview) => (
+                      <li key={preview.id} className="space-y-2 rounded border border-border bg-background px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Clock3 className="h-3 w-3" />
+                            <span className="font-medium">v{preview.version}</span>
+                            <Badge variant="outline">{preview.status}</Badge>
+                            {preview.isCurrent ? (
+                              <Badge variant="secondary">Current</Badge>
+                            ) : null}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span>{new Date(preview.createdAt).toLocaleString()}</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={rollbackMutation.isPending || preview.isCurrent}
+                            data-target-version={preview.version}
+                              onClick={() => handleRollback(preview.version)}
+                            >
+                              Restore
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span>{new Date(version.createdAt).toLocaleString()}</span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={rollbackMutation.isPending || version.version === activeSection.version}
-                            onClick={() => handleRollback(version.version)}
-                          >
-                            Restore
-                          </Button>
-                        </div>
+                        {preview.diff || preview.locatorSummary ? (
+                          <div className="space-y-1 text-muted-foreground">
+                            {preview.diff?.removed ? (
+                              <p>
+                                <span className="font-medium text-rose-600 dark:text-rose-400">Will remove:</span> {preview.diff.removed}
+                              </p>
+                            ) : null}
+                            {preview.diff?.added ? (
+                              <p>
+                                <span className="font-medium text-emerald-600 dark:text-emerald-400">Restored:</span> {preview.diff.added}
+                              </p>
+                            ) : null}
+                            {preview.locatorSummary ? (
+                              <p>
+                                <span className="font-medium text-muted-foreground">Primary locator:</span> {preview.locatorSummary}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
@@ -669,4 +708,191 @@ function parseSuggestionDiff(value: unknown): ParsedSuggestionDiff | null {
   }
 
   return { before, after, type } satisfies ParsedSuggestionDiff;
+}
+
+type VersionRecord = {
+  id: string;
+  version: number;
+  status: string;
+  createdAt: string;
+  content: Record<string, unknown> | null;
+  locators?: Array<Record<string, unknown>> | null;
+};
+
+type VersionDiffSummary = {
+  added: string | null;
+  removed: string | null;
+};
+
+type VersionPreview = VersionRecord & {
+  diff: VersionDiffSummary | null;
+  locatorSummary: string | null;
+  isCurrent: boolean;
+};
+
+function buildVersionPreviews(
+  versions: VersionRecord[],
+  currentContent: Record<string, unknown> | null,
+  currentVersion: number | null,
+): VersionPreview[] {
+  return versions.map((record, index) => {
+    const baselineContent = index === 0 ? currentContent : versions[index - 1]?.content ?? null;
+    const baselineText = extractPlainText(baselineContent);
+    const recordText = extractPlainText(record.content);
+    const diff = buildDiffSummary(recordText, baselineText);
+    const locatorSummary = describeLocator(primaryLocatorFrom(record.locators));
+
+    return {
+      ...record,
+      diff,
+      locatorSummary,
+      isCurrent: currentVersion === record.version,
+    } satisfies VersionPreview;
+  });
+}
+
+function primaryLocatorFrom(value: Array<Record<string, unknown>> | null | undefined) {
+  if (!value || value.length === 0) {
+    return null;
+  }
+
+  const [primary] = value;
+  if (!primary || typeof primary !== "object") {
+    return null;
+  }
+
+  return primary;
+}
+
+function describeLocator(locator: Record<string, unknown> | null) {
+  if (!locator) {
+    return null;
+  }
+
+  const pointer = resolvePointer(locator);
+  const citationKey = typeof locator.citationKey === "string" ? locator.citationKey : undefined;
+  const context = resolveLocatorContext(locator);
+
+  const parts = [pointer, citationKey].filter(Boolean).join(" • ");
+  if (!parts && !context) {
+    return null;
+  }
+
+  return context ? `${parts || "Locator"} — ${truncateText(context, 160)}` : parts;
+}
+
+function resolvePointer(locator: Record<string, unknown>) {
+  if (typeof locator.page === "number" || typeof locator.page === "string") {
+    return `Page ${locator.page}`;
+  }
+
+  if (typeof locator.paragraph === "number" || typeof locator.paragraph === "string") {
+    return `Paragraph ${locator.paragraph}`;
+  }
+
+  if (typeof locator.sentence === "number" || typeof locator.sentence === "string") {
+    return `Sentence ${locator.sentence}`;
+  }
+
+  return undefined;
+}
+
+function resolveLocatorContext(locator: Record<string, unknown>) {
+  if (typeof locator.note === "string" && locator.note.trim()) {
+    return locator.note;
+  }
+
+  if (typeof locator.quote === "string" && locator.quote.trim()) {
+    return locator.quote;
+  }
+
+  if (typeof locator.context === "string" && locator.context.trim()) {
+    return locator.context;
+  }
+
+  return undefined;
+}
+
+function extractPlainText(content: Record<string, unknown> | null) {
+  if (!content) {
+    return "";
+  }
+
+  let buffer = "";
+
+  const walk = (node: unknown) => {
+    if (!node) {
+      return;
+    }
+
+    if (typeof node === "string") {
+      buffer += ` ${node}`;
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+
+    if (typeof node === "object") {
+      const obj = node as Record<string, unknown>;
+      if (typeof obj.text === "string") {
+        buffer += ` ${obj.text}`;
+      }
+
+      if (Array.isArray(obj.content)) {
+        obj.content.forEach(walk);
+      }
+    }
+  };
+
+  walk(content);
+  return normalizeWhitespace(buffer);
+}
+
+function buildDiffSummary(candidateText: string, baselineText: string): VersionDiffSummary | null {
+  const candidateSentences = splitSentences(candidateText);
+  const baselineSentences = splitSentences(baselineText);
+
+  const baselineSet = new Set(baselineSentences);
+  const candidateSet = new Set(candidateSentences);
+
+  const added = candidateSentences.filter((sentence) => !baselineSet.has(sentence)).slice(0, 2);
+  const removed = baselineSentences.filter((sentence) => !candidateSet.has(sentence)).slice(0, 2);
+
+  if (added.length === 0 && removed.length === 0) {
+    return null;
+  }
+
+  return {
+    added: added.length > 0 ? truncateText(added.join(" "), 220) : null,
+    removed: removed.length > 0 ? truncateText(removed.join(" "), 220) : null,
+  } satisfies VersionDiffSummary;
+}
+
+function splitSentences(text: string) {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) {
+    return [] as string[];
+  }
+
+  const segments = normalized.match(/[^.!?]+[.!?]?/g);
+  if (!segments) {
+    return [normalized];
+  }
+
+  return segments.map((segment) => segment.trim()).filter(Boolean);
+}
+
+function normalizeWhitespace(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function truncateText(value: string, maxLength = 160) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxLength - 1))}…`;
 }

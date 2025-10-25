@@ -116,20 +116,24 @@ Indexes added for quick lookup by `project_id`, `type+status`, and `citation_key
 
 ### 7.2 Search & Triage (`/project/:id/triage`)
 - PubMed + Crossref adapters unify schema; invokes Unpaywall for OA links and fetches PDFs where accessible.
+- Adapter tray allows multi-select execution (Crossref, PubMed, future sources) with per-project persistence; UI enforces at least one adapter before search dispatch.
 - Integrity panel displays: retraction status, journal OA/trust indicator, citation anomaly heuristics (e.g., publisher flagged list).
 - Ask-AI uses ingested PDF text (if available); otherwise, UI requires manual locator entry before keeping to ledger.
+- Candidate actions cover `keep`, `needs_review` (with curator note), and `discard`; activity log records status changes.
 - Batch triage writes to Activity and updates job progress.
 
 ### 7.3 Evidence Ledger (`/project/:id/ledger`)
 - Only kept records; inspector shows metadata, integrity notes, locator provenance, linked PDF snippet.
 - Manual import supports RIS/BibTeX with required human locator entry if PDF parsing unavailable.
 - Validation state: `pending_locator`, `locator_verified`.
+- Curator actions allow returning ledger entries to triage (pending or needs-review) with transaction-backed updates and activity logging.
+- Locator checklist surfaces pointer/context requirements; blocking toast communicates missing details when verification attempted.
 
 ### 7.4 Draft & Compose (`/project/:id/draft`)
 - Section scope: Literature Review automated; Introduction/Methods/Results/Discussion/Conclusion human-first with AI “suggest improvements” (non-destructive suggestions with diff view).
 - Compose job uses ledger entries + verified locators; fails if any citation lacks locator.
 - Inline citation UI enforces ledger selection; manual locator editing allowed.
-- Version history + rollback implemented via `draft_sections`.
+- Version history + rollback implemented via `draft_sections`; history cards show sentence-level diff summaries and primary locator context before restoring.
 
 ### 7.5 Exports (`/project/:id/export`)
 - Formats: Markdown, DOCX (APA & Vancouver styles), BibTeX.

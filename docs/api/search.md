@@ -60,8 +60,12 @@ All adapters must:
 
 ---
 
+## Triage Integration Notes
+
+- Adapter selection UI persists per project and submits the active adapter list alongside search jobs (`useEnqueueSearch`).
+- Job telemetry captures the adapter array to audit blended searches and downstream ledger provenance.
+
 ## Future Enhancements
 
-- Dynamic adapter selection in the triage UI (Milestone 2 follow-up).
 - Supplemental adapters for preprint servers and clinical trial registries.
 - Resilient retry/backoff strategies when providers throttle requests.

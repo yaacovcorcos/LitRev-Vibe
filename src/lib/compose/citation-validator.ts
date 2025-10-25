@@ -1,3 +1,5 @@
+import { entryMeetsLocatorRequirements } from "@/lib/ledger/locator-readiness";
+
 export type CitationReference = {
   id: string;
   ledgerEntryId: string;
@@ -19,8 +21,7 @@ export type CitationValidationResult = {
 };
 
 function hasVerifiedLocator(record: LedgerCitationRecord) {
-  const locators = Array.isArray(record.locators) ? record.locators : [];
-  return record.verifiedByHuman && locators.length > 0;
+  return entryMeetsLocatorRequirements({ locators: record.locators, verifiedByHuman: record.verifiedByHuman });
 }
 
 export function validateCitations(
