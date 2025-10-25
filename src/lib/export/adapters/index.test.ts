@@ -55,6 +55,7 @@ function buildContext(): ExportContext {
           {
             page: 3,
             paragraph: 2,
+            note: "Summarized snippet",
           },
         ],
         integrityNotes: null,
@@ -138,7 +139,10 @@ describe("export adapters", () => {
     const xml = await zip.file("word/document.xml")?.async("string");
     expect(xml).toBeTruthy();
     expect(xml).toContain("References");
-    expect(xml).toContain("Smith");
+    expect(xml).toContain("Summary Metric");
+    expect(xml).toContain("Evidence Ledger");
+    expect(xml).toContain("Cardio Journal");
+    expect(xml).toContain("Summarized snippet");
 
     const withoutLedger = await adapter!.generate(context, {
       includeLedger: false,
@@ -148,5 +152,27 @@ describe("export adapters", () => {
     const zipWithout = await JSZip.loadAsync(withoutLedger.data as Buffer);
     const xmlWithout = await zipWithout.file("word/document.xml")?.async("string");
     expect(xmlWithout).not.toContain("References");
+  });
+
+  it("formats references according to the configured citation style", async () => {
+    const adapter = getExportAdapter("docx");
+    expect(adapter).toBeTruthy();
+
+    const context = buildContext();
+    context.project.settings = {
+      ...DEFAULT_PROJECT_SETTINGS,
+      citationStyle: "vancouver",
+    };
+
+    const artifact = await adapter!.generate(context, {
+      includeLedger: true,
+      includePrismaDiagram: false,
+    });
+
+    const zip = await JSZip.loadAsync(artifact.data as Buffer);
+    const xml = await zip.file("word/document.xml")?.async("string");
+    expect(xml).toBeTruthy();
+    expect(xml).toMatch(/1\.[^<]*Smith JA/);
+    expect(xml).not.toContain("Smith, J. A. (2021)");
   });
 });
