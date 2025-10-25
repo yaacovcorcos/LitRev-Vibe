@@ -7,7 +7,7 @@ This note captures the current authoring experience delivered in Milestone 4.
 - **Primary editor:** Tiptap-based rich text editor with a minimal toolbar (bold, italic, headings, bullet lists, undo/redo).
 - **Inspector panel:** At-a-glance metadata for the active section (status, approval time, version count, linked evidence).
 - **Timeline:** Version history rendered as a chronological list with restore actions; integrates with rollback API.
-- **AI suggestions:** Non-destructive improvements with diff previews and accept/dismiss affordances.
+- **AI suggestions:** Non-destructive improvements with structured diff previews (`before/after`) and accept/dismiss affordances.
 - **Linked evidence:** Badged list of ledger entries backing the active section.
 
 ## Workflow
@@ -16,7 +16,7 @@ This note captures the current authoring experience delivered in Milestone 4.
 2. Changes are persisted via the "Save draft" action; each save increments the version counter and records a snapshot.
 3. Approving a section disables editing, records an approval timestamp, and still allows viewing history/suggestions.
 4. Approved sections can be reopened; reopening clears the approval timestamp and re-enables editing.
-5. Version restores and AI suggestion acceptance both route through the shared versioning helpers to guarantee idempotence.
+5. Version restores and AI suggestion acceptance both route through the shared versioning helpers to guarantee idempotence; restored cards display sentence-level diffs plus primary locator summaries for reviewer awareness.
 
 ## Accessibility
 

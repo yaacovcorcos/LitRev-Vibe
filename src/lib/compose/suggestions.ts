@@ -5,6 +5,7 @@ import { logActivity } from "@/lib/activity-log";
 import { prisma } from "@/lib/prisma";
 import { ensureDraftSectionVersion, recordDraftSectionVersion } from "@/lib/compose/versions";
 import { toInputJson } from "@/lib/prisma/json";
+import { generateSuggestion } from "./suggestion-generator";
 
 const suggestionInputSchema = z.object({
   projectId: z.string(),
@@ -55,33 +56,31 @@ export async function createDraftSuggestion(input: CreateSuggestionInput) {
     throw new Error("Draft section not found for project");
   }
 
-  const ledgerSummary = section.citations
+  const verifiedCitations = section.citations
     .filter((citation) => citation.ledgerEntry.verifiedByHuman)
-    .map((citation) => citation.ledgerEntry.citationKey)
-    .slice(0, 3);
+    .map((citation) => citation.ledgerEntry.citationKey);
 
-  const summaryBase = ledgerSummary.length > 0
-    ? `Incorporate evidence from ${ledgerSummary.join(", ")}.`
-    : "Expand the section with additional context sourced from verified evidence.";
+  const primaryParagraph = extractPrimaryParagraph(section.content);
 
-  const sectionText = extractPrimaryParagraph(section.content);
-  const improvement = buildImprovedParagraph(sectionText, data.narrativeVoice);
+  const generated = await generateSuggestion({
+    projectId: section.projectId,
+    sectionId: section.id,
+    suggestionType: data.suggestionType,
+    narrativeVoice: data.narrativeVoice,
+    currentText: primaryParagraph,
+    heading: extractHeading(section.content),
+    verifiedCitations,
+  });
 
-  const updatedContent = appendParagraph(section.content, improvement);
-
-  const diffPayload = {
-    type: "append_paragraph",
-    before: sectionText,
-    after: improvement,
-  } satisfies SuggestionDiff;
+  const updatedContent = appendParagraph(section.content, generated.content);
 
   const suggestion = await prisma.draftSuggestion.create({
     data: {
       projectId: section.projectId,
       draftSectionId: section.id,
       suggestionType: data.suggestionType,
-      summary: summaryBase,
-      diff: toInputJson(diffPayload),
+      summary: generated.summary,
+      diff: toInputJson(generated.diff),
       content: toInputJson(updatedContent),
     },
   });
@@ -233,43 +232,46 @@ function extractPrimaryParagraph(content: Prisma.JsonValue | null | undefined) {
   return "";
 }
 
-function buildImprovedParagraph(base: string, voice: CreateSuggestionInput["narrativeVoice"]) {
-  const voicePrefix = voice === "confident"
-    ? "The evidence strongly suggests that"
-    : voice === "cautious"
-      ? "The available evidence indicates that"
-      : "This section can clarify that";
-
-  const trimmed = base.trim();
-  if (!trimmed) {
-    return `${voicePrefix} the literature supports a deeper exploration of study design and outcomes.`;
-  }
-
-  return `${voicePrefix} ${trimmed} Additionally, highlight nuanced findings and contextual factors across the cited studies.`;
-}
-
-function appendParagraph(content: Prisma.JsonValue | null | undefined, paragraph: string) {
+function appendParagraph(
+  content: Prisma.JsonValue | null | undefined,
+  document: { type: string; content: Array<Record<string, unknown>> },
+) {
   const doc = asJsonObject(content);
   const baseDoc = doc ?? { type: "doc", content: [] };
   const currentContent = Array.isArray((baseDoc as Record<string, unknown>).content)
     ? ((baseDoc as Record<string, unknown>).content as Array<Record<string, unknown>>)
     : [];
+  const newContent = Array.isArray(document.content) ? document.content : [];
 
   return {
     ...baseDoc,
-    content: [
-      ...currentContent,
-      {
-        type: "paragraph",
-        content: [
-          {
-            type: "text",
-            text: paragraph,
-          },
-        ],
-      },
-    ],
+    content: [...currentContent, ...newContent],
   };
+}
+
+function extractHeading(content: Prisma.JsonValue | null | undefined) {
+  const doc = asJsonObject(content);
+  if (!doc) {
+    return "Draft Section";
+  }
+
+  const nodes = Array.isArray((doc as Record<string, unknown>).content)
+    ? ((doc as Record<string, unknown>).content as Array<Record<string, unknown>>)
+    : [];
+
+  for (const node of nodes) {
+    if (node.type === "heading" && Array.isArray(node.content)) {
+      const text = node.content
+        .map((child) => (typeof child.text === "string" ? child.text : ""))
+        .join(" ")
+        .trim();
+      if (text) {
+        return text;
+      }
+    }
+  }
+
+  return "Draft Section";
 }
 
 function asJsonObject(value: Prisma.JsonValue | null | undefined): Record<string, unknown> | null {

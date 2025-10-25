@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { BookOpen, Loader2 } from "lucide-react";
+import { BookOpen, CheckCircle2, Circle, Loader2 } from "lucide-react";
 
 import { LocatorBanner } from "@/components/ledger/locator-banner";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +13,18 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 import { useAddLocator, useLedgerEntries, useVerifyLocator, type LedgerEntry } from "@/hooks/use-ledger";
+import { useReturnLedgerEntry } from "@/hooks/use-return-ledger-entry";
 import { useProject } from "@/hooks/use-projects";
 import { determineLocatorStatus, getLocatorStatusDisplay, type LocatorStatus, type LocatorStatusTone } from "@/lib/ledger/status";
+import {
+  evaluateLocatorReadiness,
+  getLocatorGuidanceItems,
+  missingPrerequisitesForVerification,
+  type LocatorGuidanceItem,
+  type LocatorReadiness,
+} from "@/lib/ledger/locator-readiness";
 import { cn } from "@/lib/utils";
 
 const pageSize = 20;
@@ -36,6 +45,7 @@ export default function LedgerPage() {
     pageSize,
   );
   const addLocatorMutation = useAddLocator(page, pageSize);
+  const returnMutation = useReturnLedgerEntry(page, pageSize);
 
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [locatorForm, setLocatorForm] = useState({
@@ -47,6 +57,9 @@ export default function LedgerPage() {
     source: "",
   });
   const [locatorError, setLocatorError] = useState<string | null>(null);
+  const [returnNote, setReturnNote] = useState("");
+  const [returnError, setReturnError] = useState<string | null>(null);
+  const [returnFeedback, setReturnFeedback] = useState<string | null>(null);
 
   const projectName = useMemo(() => {
     if (projectLoading) {
@@ -61,6 +74,11 @@ export default function LedgerPage() {
     }
   }, [ledgerData, selectedEntryId]);
 
+  useEffect(() => {
+    setReturnNote("");
+    setReturnError(null);
+  }, [selectedEntryId]);
+
   const selectedEntry = useMemo(() => {
     if (!ledgerData?.entries.length) {
       return null;
@@ -68,6 +86,24 @@ export default function LedgerPage() {
 
     return ledgerData.entries.find((entry) => entry.id === selectedEntryId) ?? ledgerData.entries[0];
   }, [ledgerData, selectedEntryId]);
+
+  const locatorReadiness = useMemo(() => {
+    if (!selectedEntry) {
+      return null;
+    }
+
+    return evaluateLocatorReadiness({
+      locators: selectedEntry.locators,
+      verifiedByHuman: selectedEntry.verifiedByHuman,
+    });
+  }, [selectedEntry]);
+
+  const locatorGuidanceItems = useMemo(
+    () => (locatorReadiness ? getLocatorGuidanceItems(locatorReadiness) : []),
+    [locatorReadiness],
+  );
+
+  const integrityFlags = useMemo(() => parseIntegrityNotes(selectedEntry?.integrityNotes), [selectedEntry]);
 
   const hasLocatorInput = Boolean(
     locatorForm.page.trim() ||
@@ -163,6 +199,33 @@ export default function LedgerPage() {
       } else {
         setLocatorError("Unable to add locator. Try again.");
       }
+    }
+  };
+
+  const handleReturnToTriage = async (status: "pending" | "needs_review") => {
+    if (!projectId || !selectedEntry || !selectedEntry.candidateId) {
+      setReturnError("This entry cannot be returned to triage.");
+      return;
+    }
+
+    try {
+      setReturnError(null);
+      setReturnFeedback(null);
+
+      const note = returnNote.trim();
+
+      await returnMutation.mutateAsync({
+        projectId,
+        entryId: selectedEntry.id,
+        status,
+        note: note ? note : undefined,
+      });
+
+      setReturnFeedback(status === "pending" ? "Returned to pending triage." : "Marked as needs review.");
+      setReturnNote("");
+      setSelectedEntryId(null);
+    } catch (error) {
+      setReturnError(error instanceof Error ? error.message : "Failed to update triage status.");
     }
   };
 
@@ -303,12 +366,31 @@ export default function LedgerPage() {
               </div>
             ) : selectedEntry ? (
               <div className="space-y-6">
+                {returnFeedback ? <p className="text-xs text-emerald-600">{returnFeedback}</p> : null}
+                {returnError ? <p className="text-xs text-destructive">{returnError}</p> : null}
                 <div className="space-y-2">
                   <p className="text-sm font-semibold text-foreground">{extractTitle(selectedEntry)}</p>
                   <p className="text-xs text-muted-foreground">
                     Citation key: <span className="font-mono text-foreground/90">{selectedEntry.citationKey}</span>
                   </p>
-                  <InspectorStatusBanner entry={selectedEntry} />
+                  <InspectorStatusBanner entry={selectedEntry} readiness={locatorReadiness} />
+                  {locatorGuidanceItems.length > 0 ? <LocatorChecklist items={locatorGuidanceItems} /> : null}
+                  {integrityFlags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {integrityFlags.map((flag, index) => (
+                        <Badge
+                          key={`${flag.source}-${flag.label}-${index}`}
+                          variant={flag.severity === "critical" ? "destructive" : flag.severity === "warning" ? "outline" : "secondary"}
+                          className="text-xs"
+                          title={[flag.label, flag.source ? `Source: ${flag.source}` : null, flag.reason]
+                            .filter(Boolean)
+                            .join(" • ")}
+                        >
+                          {flag.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 <InspectorSection title="Metadata">
                   <MetadataList metadata={selectedEntry.metadata} />
@@ -459,37 +541,72 @@ export default function LedgerPage() {
                   </form>
                 </InspectorSection>
                 <InspectorSection title="Integrity notes">
-                  {(() => {
-                    const parsedFlags = parseIntegrityNotes(selectedEntry.integrityNotes);
-                    if (parsedFlags.length === 0) {
-                      return <p className="text-sm text-muted-foreground">No integrity notes recorded.</p>;
-                    }
-
-                    return (
-                      <ul className="space-y-2 text-sm">
-                        {parsedFlags.map((flag, index) => (
-                          <li
-                            key={`${flag.source}-${flag.label}-${index}`}
-                            className={cn(
-                              "rounded border p-3",
-                              flag.severity === "critical"
-                                ? "border-destructive/40 bg-destructive/10 text-destructive"
-                                : flag.severity === "warning"
-                                  ? "border-amber-300/70 bg-amber-100/60 text-amber-800"
-                                  : "border-muted-foreground/30 bg-muted/30 text-muted-foreground",
-                            )}
-                          >
-                            <p className="text-xs font-semibold uppercase tracking-wide">
-                              {flag.label}
-                              <span className="ml-2 text-[10px] capitalize text-muted-foreground/70">{flag.source}</span>
-                            </p>
-                            {flag.reason ? <p className="text-xs text-foreground/80">{flag.reason}</p> : null}
-                          </li>
-                        ))}
-                      </ul>
-                    );
-                  })()}
+                  {integrityFlags.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No integrity notes recorded.</p>
+                  ) : (
+                    <ul className="space-y-2 text-sm">
+                      {integrityFlags.map((flag, index) => (
+                        <li
+                          key={`${flag.source}-${flag.label}-${index}`}
+                          className={cn(
+                            "rounded border p-3",
+                            flag.severity === "critical"
+                              ? "border-destructive/40 bg-destructive/10 text-destructive"
+                              : flag.severity === "warning"
+                                ? "border-amber-300/70 bg-amber-100/60 text-amber-800"
+                                : "border-muted-foreground/30 bg-muted/30 text-muted-foreground",
+                          )}
+                        >
+                          <p className="text-xs font-semibold uppercase tracking-wide">
+                            {flag.label}
+                            <span className="ml-2 text-[10px] capitalize text-muted-foreground/70">{flag.source}</span>
+                          </p>
+                          {flag.reason ? <p className="text-xs text-foreground/80">{flag.reason}</p> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </InspectorSection>
+                {selectedEntry.candidateId ? (
+                  <InspectorSection title="Curator actions">
+                    <p className="text-sm text-muted-foreground">
+                      Return this entry to triage when additional review or locator work is required.
+                    </p>
+                    <div className="space-y-1">
+                      <Label htmlFor="ledger-return-note" className="text-xs font-medium text-muted-foreground">
+                        Note to triage reviewers (optional)
+                      </Label>
+                      <Textarea
+                        id="ledger-return-note"
+                        rows={2}
+                        value={returnNote}
+                        onChange={(event) => setReturnNote(event.target.value)}
+                        disabled={returnMutation.isPending}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={returnMutation.isPending}
+                        onClick={() => handleReturnToTriage("pending")}
+                      >
+                        {returnMutation.isPending ? "Returning…" : "Return to pending"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={returnMutation.isPending}
+                        onClick={() => handleReturnToTriage("needs_review")}
+                      >
+                        {returnMutation.isPending ? "Returning…" : "Mark needs review"}
+                      </Button>
+                    </div>
+                  </InspectorSection>
+                ) : null}
                 <InspectorSection title="Provenance">
                   <pre className="overflow-x-auto rounded bg-muted/50 p-3 text-xs text-foreground/90">
                     {JSON.stringify(selectedEntry.provenance, null, 2)}
@@ -530,9 +647,10 @@ function InspectorSection({ title, children }: InspectorSectionProps) {
 
 type InspectorStatusBannerProps = {
   entry: LedgerEntry;
+  readiness?: LocatorReadiness | null;
 };
 
-function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
+function InspectorStatusBanner({ entry, readiness }: InspectorStatusBannerProps) {
   const status = determineLocatorStatus({ locators: entry.locators, verifiedByHuman: entry.verifiedByHuman });
   const display = getLocatorStatusDisplay(status);
 
@@ -541,10 +659,44 @@ function InspectorStatusBanner({ entry }: InspectorStatusBannerProps) {
       display={display}
       actionSlot={
         status === "locator_pending_review" ? (
-          <VerifyButton entryId={entry.id} page={0} pageSize={pageSize} />
+          <VerifyButton entry={entry} readiness={readiness} page={0} pageSize={pageSize} />
         ) : null
       }
     />
+  );
+}
+
+type LocatorChecklistProps = {
+  items: LocatorGuidanceItem[];
+};
+
+function LocatorChecklist({ items }: LocatorChecklistProps) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3 rounded-md border border-muted-foreground/20 bg-muted/30 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Locator checklist</p>
+      <ul className="space-y-2">
+        {items.map((item) => {
+          const fulfilled = item.satisfied;
+          const Icon = fulfilled ? CheckCircle2 : Circle;
+          const iconClass = fulfilled ? "text-emerald-600" : "text-muted-foreground/60";
+          const textClass = fulfilled ? "text-sm text-foreground" : "text-sm text-muted-foreground";
+
+          return (
+            <li key={item.id} className="flex items-start gap-2">
+              <Icon className={cn("mt-0.5 h-4 w-4", iconClass)} aria-hidden />
+              <div className="space-y-1">
+                <p className={textClass}>{item.label}</p>
+                <p className="text-xs text-muted-foreground/80">{item.description}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -709,21 +861,34 @@ function LocatorField({ id, label, placeholder, value, onChange, disabled }: Loc
 export { LocatorSummary };
 
 type VerifyButtonProps = {
-  entryId: string;
+  entry: LedgerEntry;
+  readiness?: LocatorReadiness | null;
   page: number;
   pageSize: number;
 };
 
-function VerifyButton({ entryId, page, pageSize }: VerifyButtonProps) {
+function VerifyButton({ entry, readiness, page, pageSize }: VerifyButtonProps) {
   const params = useParams<Params>();
   const projectId = params?.id;
   const verifyMutation = useVerifyLocator(page, pageSize);
+  const { toast } = useToast();
 
   const handleVerify = () => {
     if (!projectId) {
       return;
     }
-    verifyMutation.mutate({ projectId, entryId, verified: true });
+
+    const message = readiness ? missingPrerequisitesForVerification(readiness) : null;
+
+    if (message) {
+      toast({
+        variant: "destructive",
+        description: message,
+      });
+      return;
+    }
+
+    verifyMutation.mutate({ projectId, entryId: entry.id, verified: true });
   };
 
   return (

@@ -11,6 +11,20 @@ const hoisted = vi.hoisted(() => {
     jobFindUnique: vi.fn(async () => ({ resumableState: null })),
     ensureDraftSectionVersion: vi.fn(async () => {}),
     recordDraftSectionVersion: vi.fn(async () => {}),
+    generateComposeDocument: vi.fn(async () => ({
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "Generated Section" }],
+        },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Paragraph content [Smith2020]" }],
+        },
+      ],
+    })),
   };
 });
 
@@ -57,6 +71,10 @@ vi.mock("./versions", () => ({
   recordDraftSectionVersion: hoisted.recordDraftSectionVersion,
 }));
 
+vi.mock("./generator", () => ({
+  generateComposeDocument: hoisted.generateComposeDocument,
+}));
+
 const {
   updateJobRecord,
   logActivity,
@@ -67,6 +85,7 @@ const {
   jobFindUnique,
   ensureDraftSectionVersion,
   recordDraftSectionVersion,
+  generateComposeDocument,
 } = hoisted;
 
 import { buildInitialState } from "./jobs";
@@ -132,6 +151,7 @@ describe("processComposeJob", () => {
     jobFindUnique.mockResolvedValue({ resumableState: null });
     ensureDraftSectionVersion.mockReset();
     recordDraftSectionVersion.mockReset();
+    generateComposeDocument.mockClear();
   });
 
   it("generates draft sections and updates job progress", async () => {
@@ -171,6 +191,13 @@ describe("processComposeJob", () => {
     const result = await processComposeJob(payload);
 
     expect(result).toEqual({ completedSections: 1, totalSections: 1 });
+    expect(generateComposeDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "project-1",
+        section: expect.objectContaining({ title: "Custom Literature Review" }),
+        ledgerEntries: expect.arrayContaining([expect.objectContaining({ id: "ledger-1" })]),
+      }),
+    );
     expect(ledgerFindMany).toHaveBeenCalledWith({
       where: { projectId: "project-1", id: { in: ["ledger-1"] } },
       select: {

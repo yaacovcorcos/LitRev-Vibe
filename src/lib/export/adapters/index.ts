@@ -106,83 +106,66 @@ const adapters: Partial<Record<ExportFormat, ExportAdapter>> = {
     format: "docx",
     generate: async (context, options) => {
       const docxModule: any = await import("docx");
-      const { Document, HeadingLevel, Packer, Paragraph, TextRun } = docxModule;
+      const {
+        AlignmentType,
+        Document,
+        HeadingLevel,
+        Packer,
+        Paragraph,
+        Table,
+        TableCell,
+        TableRow,
+        TextRun,
+        WidthType,
+      } = docxModule;
 
-      const introParagraphs: any[] = [
-        new Paragraph({ text: context.project.name, heading: HeadingLevel.TITLE }),
-        ...(context.project.description ? [new Paragraph(context.project.description)] : []),
-        new Paragraph({ text: `Generated on ${context.generatedAt.toISOString()}`, spacing: { after: 200 } }),
-        new Paragraph({ text: "Summary", heading: HeadingLevel.HEADING_1 }),
-        new Paragraph(`Ledger entries: ${context.ledgerEntries.length}`),
-        new Paragraph(`Draft sections: ${context.draftSections.length}`),
-        new Paragraph(`Sources screened: ${context.metrics.screened}`),
-        new Paragraph(`Sources included: ${context.metrics.included}`),
-      ];
+      const children: any[] = [];
 
-      const sectionParagraphs = context.draftSections.flatMap((section) => {
-        const paragraphs = extractParagraphs(section.content);
-        if (paragraphs.length === 0) {
-          return [];
-        }
-        const headingParagraph = new Paragraph({
-          text: resolveSectionHeading(section.sectionType),
-          heading: HeadingLevel.HEADING_1,
-        });
+      children.push(...buildTitleSection(context, Paragraph, TextRun, HeadingLevel));
+      children.push(buildSummaryTable(context, Table, TableRow, TableCell, Paragraph, TextRun, WidthType));
+      children.push(...buildSectionContent(context, Paragraph, HeadingLevel));
 
-        const contentParagraphs = paragraphs.map((text) => new Paragraph(text));
-        return [headingParagraph, ...contentParagraphs];
-      });
-
-      const ledgerParagraphs = options.includeLedger && context.ledgerEntries.length > 0
-        ? [
-            new Paragraph({ text: "Evidence Ledger", heading: HeadingLevel.HEADING_1 }),
-            ...context.ledgerEntries.map((entry) => {
-              const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
-              const title = typeof metadata.title === "string" ? metadata.title : entry.citationKey;
-              const journal = typeof metadata.journal === "string" ? metadata.journal : null;
-              const year = typeof metadata.publishedAt === "string" ? metadata.publishedAt : null;
-              const summary = [journal, year].filter(Boolean).join(", ");
-
-              const runs = [
-                new TextRun({ text: `${entry.citationKey}: `, bold: true }),
-                new TextRun(title),
-              ];
-              if (summary) {
-                runs.push(new TextRun({ text: ` (${summary})` }));
-              }
-
-              return new Paragraph({ children: runs });
-            }),
-          ]
-        : [];
+      if (options.includeLedger && context.ledgerEntries.length > 0) {
+        children.push(new Paragraph({ text: "Evidence Ledger", heading: HeadingLevel.HEADING_1 }));
+        children.push(
+          buildLedgerTable(context, Table, TableRow, TableCell, Paragraph, TextRun, WidthType, AlignmentType),
+        );
+      }
 
       const references = options.includeLedger ? buildBibliography(context) : [];
-      const referenceParagraphs = references.length > 0
-        ? [
-            new Paragraph({ text: "References", heading: HeadingLevel.HEADING_1 }),
-            ...references.map((reference) => new Paragraph(reference)),
-          ]
-        : [];
+      if (references.length > 0) {
+        children.push(new Paragraph({ text: "References", heading: HeadingLevel.HEADING_1 }));
+        references.forEach((reference) => {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: reference, font: "Times New Roman", size: 24 }),
+              ],
+              spacing: { after: 120 },
+            }),
+          );
+        });
+      }
 
-      const prismaParagraphs = options.includePrismaDiagram
-        ? [
-            new Paragraph({ text: "PRISMA Snapshot", heading: HeadingLevel.HEADING_1 }),
-            new Paragraph(
-              `Identified ${context.metrics.totalIdentified} records, stored ${context.metrics.totalStored}, screened ${context.metrics.screened}, included ${context.metrics.included}. Detailed diagram coming soon.`,
-            ),
-          ]
-        : [];
+      if (options.includePrismaDiagram) {
+        children.push(new Paragraph({ text: "PRISMA Snapshot", heading: HeadingLevel.HEADING_1 }));
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text:
+                  `Identified ${context.metrics.totalIdentified} records, stored ${context.metrics.totalStored}, screened ${context.metrics.screened}, included ${context.metrics.included}.`,
+              }),
+            ],
+            spacing: { after: 200 },
+          }),
+        );
+      }
 
       const doc = new Document({
         sections: [
           {
-            children: [
-              ...introParagraphs,
-              ...sectionParagraphs,
-              ...ledgerParagraphs,
-              ...referenceParagraphs,
-              ...prismaParagraphs,
-            ],
+            children,
           },
         ],
       });
@@ -214,6 +197,10 @@ function buildBibliography(context: ExportContext) {
   const items = context.ledgerEntries.map((entry) => ledgerEntryToCsl(entry));
   const citationStyle = (context.project.settings.citationStyle ?? "apa").toLowerCase();
 
+  if (citationStyle === "vancouver") {
+    return context.ledgerEntries.map((entry, index) => formatVancouverBibliography(entry, index + 1));
+  }
+
   try {
     const cite = new Cite(items);
     const bibliography = cite.format("bibliography", {
@@ -231,6 +218,86 @@ function buildBibliography(context: ExportContext) {
     console.error("Failed to build bibliography", error);
     return [];
   }
+}
+
+function formatVancouverBibliography(entry: ExportContext["ledgerEntries"][number], index: number) {
+  const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
+  const title = typeof metadata.title === "string" ? metadata.title : entry.citationKey;
+  const journal = typeof metadata.journal === "string" ? metadata.journal : undefined;
+  const year = extractYear(metadata.publishedAt ?? metadata.year);
+  const doi = typeof metadata.doi === "string" ? metadata.doi : undefined;
+  const url = typeof metadata.url === "string" ? metadata.url : undefined;
+
+  const authors = formatVancouverAuthors(metadata.authors ?? metadata.author);
+
+  const parts = [
+    `${index}.`,
+    authors ?? entry.citationKey,
+    title,
+  ];
+
+  if (journal) {
+    parts.push(journal);
+  }
+
+  if (year) {
+    parts.push(String(year));
+  }
+
+  if (doi) {
+    parts.push(`doi:${doi}`);
+  } else if (url) {
+    parts.push(url);
+  }
+
+  return parts.filter((part) => part && String(part).trim().length > 0).join(" ");
+}
+
+function formatVancouverAuthors(authorsInput: unknown): string | undefined {
+  if (!authorsInput) {
+    return undefined;
+  }
+
+  const authors = normalizeAuthors(authorsInput);
+  if (!authors || authors.length === 0) {
+    return undefined;
+  }
+
+  return authors
+    .map((author) => {
+      const family = author.family ?? "";
+      const given = author.given ?? "";
+      const initials = given
+        .split(/[-\s]+/)
+        .filter((segment) => segment.length > 0)
+        .map((segment) => segment[0]?.toUpperCase() ?? "")
+        .join("");
+      return `${family}${initials ? ` ${initials}` : ""}`.trim();
+    })
+    .join(", ");
+}
+
+function extractYear(value: unknown): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const match = value.match(/(19|20)\d{2}/);
+    if (match) {
+      return parseInt(match[0], 10);
+    }
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.getFullYear();
+  }
+
+  return undefined;
 }
 
 function ledgerEntryToCsl(entry: ExportContext["ledgerEntries"][number]) {
@@ -359,6 +426,195 @@ function resolveSectionHeading(sectionType: string) {
     default:
       return "Draft Section";
   }
+}
+
+function buildTitleSection(
+  context: ExportContext,
+  Paragraph: any,
+  TextRun: any,
+  HeadingLevel: any,
+) {
+  const paragraphs = [] as Array<InstanceType<typeof Paragraph>>;
+  paragraphs.push(
+    new Paragraph({
+      text: context.project.name,
+      heading: HeadingLevel.TITLE,
+      spacing: { after: 160 },
+    }),
+  );
+
+  if (context.project.description) {
+    paragraphs.push(
+      new Paragraph({
+        children: [new TextRun({ text: context.project.description })],
+        spacing: { after: 120 },
+      }),
+    );
+  }
+
+  paragraphs.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: `Generated on ${context.generatedAt.toISOString()}`, italics: true }),
+      ],
+      spacing: { after: 240 },
+    }),
+  );
+
+  return paragraphs;
+}
+
+function buildSummaryTable(
+  context: ExportContext,
+  Table: any,
+  TableRow: any,
+  TableCell: any,
+  Paragraph: any,
+  TextRun: any,
+  WidthType: any,
+) {
+  const metrics = [
+    { label: "Ledger entries", value: String(context.ledgerEntries.length) },
+    { label: "Draft sections", value: String(context.draftSections.length) },
+    { label: "Sources screened", value: String(context.metrics.screened) },
+    { label: "Sources included", value: String(context.metrics.included) },
+    { label: "Pending triage", value: String(context.metrics.candidateCounts.pending ?? 0) },
+  ];
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({
+        children: [
+          createTableCell(TableCell, Paragraph, TextRun, "Summary Metric", true),
+          createTableCell(TableCell, Paragraph, TextRun, "Value", true),
+        ],
+      }),
+      ...metrics.map((metric) =>
+        new TableRow({
+          children: [
+            createTableCell(TableCell, Paragraph, TextRun, metric.label),
+            createTableCell(TableCell, Paragraph, TextRun, metric.value),
+          ],
+        }),
+      ),
+    ],
+  });
+}
+
+function buildSectionContent(
+  context: ExportContext,
+  Paragraph: any,
+  HeadingLevel: any,
+) {
+  return context.draftSections.flatMap((section) => {
+    const paragraphs = extractParagraphs(section.content);
+    if (paragraphs.length === 0) {
+      return [] as Array<InstanceType<typeof Paragraph>>;
+    }
+
+    const headingParagraph = new Paragraph({
+      text: resolveSectionHeading(section.sectionType),
+      heading: HeadingLevel.HEADING_1,
+      spacing: { after: 120 },
+    });
+
+    const contentParagraphs = paragraphs.map(
+      (text) =>
+        new Paragraph({
+          text,
+          spacing: { after: 160 },
+        }),
+    );
+
+    return [headingParagraph, ...contentParagraphs];
+  });
+}
+
+function buildLedgerTable(
+  context: ExportContext,
+  Table: any,
+  TableRow: any,
+  TableCell: any,
+  Paragraph: any,
+  TextRun: any,
+  WidthType: any,
+  AlignmentType: any,
+) {
+  const headerRow = new TableRow({
+    children: [
+      createTableCell(TableCell, Paragraph, TextRun, "Citation", true),
+      createTableCell(TableCell, Paragraph, TextRun, "Title", true),
+      createTableCell(TableCell, Paragraph, TextRun, "Journal", true),
+      createTableCell(TableCell, Paragraph, TextRun, "Year", true),
+      createTableCell(TableCell, Paragraph, TextRun, "Locator", true, AlignmentType.CENTER),
+    ],
+  });
+
+  const rows = context.ledgerEntries.map((entry) => {
+    const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
+    const journal = typeof metadata.journal === "string" ? metadata.journal : "";
+    const publishedAt = typeof metadata.publishedAt === "string" ? metadata.publishedAt : "";
+    const locatorSummary = summarizeLocator(entry.locators ?? null) ?? "";
+
+    return new TableRow({
+      children: [
+        createTableCell(TableCell, Paragraph, TextRun, entry.citationKey),
+        createTableCell(TableCell, Paragraph, TextRun, typeof metadata.title === "string" ? metadata.title : entry.citationKey),
+        createTableCell(TableCell, Paragraph, TextRun, journal),
+        createTableCell(TableCell, Paragraph, TextRun, publishedAt),
+        createTableCell(TableCell, Paragraph, TextRun, locatorSummary, false, AlignmentType.CENTER),
+      ],
+    });
+  });
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [headerRow, ...rows],
+  });
+}
+
+function createTableCell(
+  TableCell: any,
+  Paragraph: any,
+  TextRun: any,
+  text: string,
+  bold = false,
+  alignment?: any,
+) {
+  return new TableCell({
+    children: [
+      new Paragraph({
+        children: [new TextRun({ text, bold })],
+        alignment,
+      }),
+    ],
+  });
+}
+
+function summarizeLocator(locators: unknown) {
+  if (!locators || !Array.isArray(locators) || locators.length === 0) {
+    return null;
+  }
+
+  const first = locators[0] as Record<string, unknown>;
+  const parts: string[] = [];
+  if (typeof first.page === "number" || typeof first.page === "string") {
+    parts.push(`Page ${first.page}`);
+  }
+  if (typeof first.paragraph === "number" || typeof first.paragraph === "string") {
+    parts.push(`Paragraph ${first.paragraph}`);
+  }
+  if (typeof first.sentence === "number" || typeof first.sentence === "string") {
+    parts.push(`Sentence ${first.sentence}`);
+  }
+  const pointer = parts.join(", ");
+
+  const note = typeof first.note === "string" ? first.note : undefined;
+  const quote = typeof first.quote === "string" ? first.quote : undefined;
+  const context = note ?? quote;
+
+  return context ? `${pointer}${pointer ? " — " : ""}${context}` : pointer || "";
 }
 
 function extractParagraphs(content: unknown): string[] {

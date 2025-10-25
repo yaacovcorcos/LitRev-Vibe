@@ -20,6 +20,10 @@ const versionsMock = vi.hoisted(() => ({
   recordDraftSectionVersion: vi.fn(),
 }));
 
+const generatorMock = vi.hoisted(() => ({
+  generateSuggestion: vi.fn(),
+}));
+
 vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
 }));
@@ -31,6 +35,10 @@ vi.mock("@/lib/activity-log", () => ({
 vi.mock("@/lib/compose/versions", () => ({
   ensureDraftSectionVersion: versionsMock.ensureDraftSectionVersion,
   recordDraftSectionVersion: versionsMock.recordDraftSectionVersion,
+}));
+
+vi.mock("./suggestion-generator", () => ({
+  generateSuggestion: generatorMock.generateSuggestion,
 }));
 
 import { createDraftSuggestion, resolveDraftSuggestion } from "./suggestions";
@@ -51,6 +59,7 @@ describe("draft suggestions helpers", () => {
     logActivityMock.mockReset();
     versionsMock.ensureDraftSectionVersion.mockReset();
     versionsMock.recordDraftSectionVersion.mockReset();
+    generatorMock.generateSuggestion.mockReset();
   });
 
   it("creates a suggestion with appended paragraph", async () => {
@@ -74,6 +83,29 @@ describe("draft suggestions helpers", () => {
       ],
     });
 
+    generatorMock.generateSuggestion.mockResolvedValue({
+      summary: "Clarify how Smith2024 informs the outcome narrative.",
+      diff: {
+        type: "append_paragraph",
+        before: "Baseline paragraph.",
+        after: "This section should clarify how Smith2024 strengthens the findings [Smith2024].",
+      },
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: "This section should clarify how Smith2024 strengthens the findings [Smith2024].",
+              },
+            ],
+          },
+        ],
+      },
+    });
+
     prismaMock.draftSuggestion.create.mockImplementation(async ({ data }) => ({
       ...data,
       id: "suggestion-1",
@@ -90,6 +122,14 @@ describe("draft suggestions helpers", () => {
       suggestionType: "improvement",
     });
 
+    expect(generatorMock.generateSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "project-1",
+        sectionId: "section-1",
+        suggestionType: "improvement",
+        verifiedCitations: ["Smith2024"],
+      }),
+    );
     expect(prismaMock.draftSuggestion.create).toHaveBeenCalled();
     expect(suggestion.id).toBe("suggestion-1");
     expect(logActivityMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -160,5 +200,68 @@ describe("draft suggestions helpers", () => {
     }));
     expect(versionsMock.ensureDraftSectionVersion).toHaveBeenCalled();
     expect(versionsMock.recordDraftSectionVersion).toHaveBeenCalled();
+  });
+
+  it("dismisses a suggestion without updating the draft section", async () => {
+    prismaMock.draftSuggestion.findUnique.mockResolvedValueOnce({
+      id: "suggestion-2",
+      projectId: "project-1",
+      draftSectionId: "section-1",
+      suggestionType: "clarity",
+      summary: "",
+      diff: {},
+      content: { type: "doc", content: [] },
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      resolvedAt: null,
+      resolvedBy: null,
+      section: {
+        id: "section-1",
+        version: 1,
+      },
+    });
+
+    prismaMock.draftSuggestion.update.mockResolvedValue({
+      id: "suggestion-2",
+      projectId: "project-1",
+      draftSectionId: "section-1",
+      suggestionType: "clarity",
+      summary: "",
+      diff: {},
+      content: { type: "doc", content: [] },
+      status: "dismissed",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      resolvedAt: new Date(),
+      resolvedBy: "user-1",
+      section: {
+        id: "section-1",
+        version: 1,
+      },
+    });
+
+    prismaMock.draftSuggestion.findUnique.mockResolvedValueOnce({
+      id: "suggestion-2",
+      projectId: "project-1",
+      draftSectionId: "section-1",
+      suggestionType: "clarity",
+      summary: "",
+      diff: {},
+      content: { type: "doc", content: [] },
+      status: "dismissed",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      resolvedAt: new Date(),
+      resolvedBy: "user-1",
+    });
+
+    const result = await resolveDraftSuggestion("suggestion-2", "dismiss", "user-1");
+
+    expect(prismaMock.draftSection.update).not.toHaveBeenCalled();
+    expect(result?.status).toBe("dismissed");
+    expect(logActivityMock).toHaveBeenCalledWith(expect.objectContaining({
+      action: "draft.suggestion_dismissed",
+    }));
   });
 });

@@ -7,7 +7,9 @@ type TransactionClient = Prisma.TransactionClient;
 
 export async function recordDraftSectionVersion(
   client: TransactionClient,
-  section: Pick<DraftSection, "id" | "version" | "status" | "content">,
+  section: Pick<DraftSection, "id" | "version" | "status" | "content"> & {
+    locators?: Array<Record<string, unknown>>;
+  },
 ) {
   await client.draftSectionVersion.create({
     data: {
@@ -15,13 +17,16 @@ export async function recordDraftSectionVersion(
       version: section.version,
       status: section.status,
       content: toInputJson(section.content),
+      locators: section.locators ? toInputJson(section.locators) : undefined,
     },
   });
 }
 
 export async function ensureDraftSectionVersion(
   client: TransactionClient,
-  section: Pick<DraftSection, "id" | "version" | "status" | "content">,
+  section: Pick<DraftSection, "id" | "version" | "status" | "content"> & {
+    locators?: Array<Record<string, unknown>>;
+  },
 ) {
   const existing = await client.draftSectionVersion.findUnique({
     where: {
@@ -92,7 +97,17 @@ export async function rollbackDraftSection(
       },
     });
 
-    await recordDraftSectionVersion(tx, updated);
+    const snapshotLocators = Array.isArray(snapshot.locators)
+      ? (snapshot.locators as Array<Record<string, unknown>>)
+      : undefined;
+
+    await recordDraftSectionVersion(tx, {
+      id: updated.id,
+      version: updated.version,
+      status: updated.status,
+      content: updated.content,
+      locators: snapshotLocators,
+    });
 
     return updated;
   });
