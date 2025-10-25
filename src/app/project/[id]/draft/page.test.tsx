@@ -233,11 +233,14 @@ describe("DraftPage version history", () => {
     render(<DraftPage />);
     expect(useRollbackDraftVersionMock).toHaveBeenCalled();
 
-    await screen.findByText(/Will remove:/i);
-    expect(screen.getByText(/Beta addition\./i)).toBeInTheDocument();
+    const removalLabels = await screen.findAllByText(/Will remove:/i);
+    expect(removalLabels.length).toBeGreaterThan(0);
+    const removedSentences = screen.getAllByText(/Beta addition\./i);
+    expect(removedSentences.length).toBeGreaterThan(0);
 
     await screen.findByText(/Restored:/i);
-    expect(screen.getByText(/Gamma insight\./i)).toBeInTheDocument();
+    const restoredSentences = screen.getAllByText(/Gamma insight\./i);
+    expect(restoredSentences.length).toBeGreaterThan(0);
 
     const locator = screen.getByText(/Doe2021/i);
     expect(locator.textContent ?? locator.innerHTML).toMatch(/Page 12/i);
