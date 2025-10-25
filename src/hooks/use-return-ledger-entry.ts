@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { candidateKeys } from "@/hooks/use-candidates";
-import { ledgerKeys } from "@/hooks/use-ledger";
+import { ledgerKeys, type LedgerEntry } from "@/hooks/use-ledger";
 
 type ReturnLedgerEntryInput = {
   projectId: string;
@@ -38,9 +38,9 @@ export function useReturnLedgerEntry(page = 0, pageSize = 20) {
   return useMutation<ReturnLedgerEntryResponse, Error, ReturnLedgerEntryInput>({
     mutationFn: returnLedgerEntry,
     onSuccess: (_data, variables) => {
-      queryClient.setQueryData(
+      queryClient.setQueryData<{ entries: LedgerEntry[]; total: number; page: number; pageSize: number } | undefined>(
         ledgerKeys.list(variables.projectId, page, pageSize),
-        (current: { entries: any[]; total: number; page: number; pageSize: number } | undefined) => {
+        (current) => {
           if (!current) {
             return current;
           }

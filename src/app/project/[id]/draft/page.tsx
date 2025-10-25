@@ -735,8 +735,8 @@ function buildVersionPreviews(
   currentContent: Record<string, unknown> | null,
   currentVersion: number | null,
 ): VersionPreview[] {
-  return versions.map((record, index) => {
-    const baselineContent = index === 0 ? currentContent : versions[index - 1]?.content ?? null;
+  return versions.map((record) => {
+    const baselineContent = currentContent;
     const baselineText = extractPlainText(baselineContent);
     const recordText = extractPlainText(record.content);
     const diff = buildDiffSummary(recordText, baselineText);
@@ -875,6 +875,15 @@ function splitSentences(text: string) {
   const normalized = normalizeWhitespace(text);
   if (!normalized) {
     return [] as string[];
+  }
+
+  if (typeof Intl !== "undefined" && typeof Intl.Segmenter === "function") {
+    const segmenter = new Intl.Segmenter("en", { granularity: "sentence" });
+    const segments = Array.from(segmenter.segment(normalized));
+    const tokens = segments.map((item) => item.segment.trim()).filter(Boolean);
+    if (tokens.length > 0) {
+      return tokens;
+    }
   }
 
   const segments = normalized.match(/[^.!?]+[.!?]?/g);
