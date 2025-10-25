@@ -165,6 +165,7 @@ Indexes added for quick lookup by `project_id`, `type+status`, and `citation_key
 
 ### Milestone 1 (Weeks 1-2) — Core Shell & Plan Data
 - Build global layout, navigation, command palette.
+- Ensure workspace navigation resolves project-scoped routes with the active project context and disables project-only items when no project is selected (covered by Sidebar regression tests).
 - Implement project CRUD, planning page with AI plan generator, editable plan persistence.
 - Activity log scaffolding.
 - Deliver high-fidelity Home + Planning shells (responsive, accessible) and capture review feedback.

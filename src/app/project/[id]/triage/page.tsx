@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Filter, Loader2, Search } from "lucide-react";
@@ -15,6 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCandidates, useEnqueueSearch } from "@/hooks/use-candidates";
 import { useProject } from "@/hooks/use-projects";
 import type { SearchQuery } from "@/lib/search";
+import { searchAdapters } from "@/lib/search";
+
+const adapterOptions = searchAdapters.map((adapter) => ({ id: adapter.id, label: adapter.label }));
+const STORAGE_KEY_PREFIX = "litrev.adapters";
 
 export default function TriagePage() {
   const params = useParams<{ id: string }>();
@@ -28,6 +32,8 @@ export default function TriagePage() {
   const enqueueSearch = useEnqueueSearch(page, pageSize, statuses);
 
   const [queryTerms, setQueryTerms] = useState("hypertension lifestyle modifications");
+  const [selectedAdapters, setSelectedAdapters] = useState<string[]>(() => adapterOptions.map((option) => option.id));
+  const [adapterError, setAdapterError] = useState<string | null>(null);
   const projectName = useMemo(() => {
     if (projectLoading) {
       return "Loading project…";
@@ -35,9 +41,56 @@ export default function TriagePage() {
     return project?.name ?? "Untitled project";
   }, [project, projectLoading]);
 
+  useEffect(() => {
+    if (!projectId || typeof window === "undefined") {
+      return;
+    }
+
+    const stored = window.localStorage.getItem(`${STORAGE_KEY_PREFIX}.${projectId}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
+          setSelectedAdapters(parsed);
+        }
+      } catch {
+        setSelectedAdapters(adapterOptions.map((option) => option.id));
+      }
+    } else {
+      setSelectedAdapters(adapterOptions.map((option) => option.id));
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId || typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(
+      `${STORAGE_KEY_PREFIX}.${projectId}`,
+      JSON.stringify(selectedAdapters.length > 0 ? selectedAdapters : []),
+    );
+  }, [projectId, selectedAdapters]);
+
+  const toggleAdapter = (adapterId: string) => {
+    setSelectedAdapters((current) => {
+      const exists = current.includes(adapterId);
+      const next = exists ? current.filter((id) => id !== adapterId) : [...current, adapterId];
+      return next;
+    });
+    setAdapterError(null);
+  };
+
+  const hasAdaptersSelected = selectedAdapters.length > 0;
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!projectId || !queryTerms.trim()) {
+      return;
+    }
+
+    if (!hasAdaptersSelected) {
+      setAdapterError("Select at least one adapter before running a search.");
       return;
     }
 
@@ -46,7 +99,7 @@ export default function TriagePage() {
       pageSize: 20,
     };
 
-    enqueueSearch.mutate({ projectId, query: payload });
+    enqueueSearch.mutate({ projectId, query: payload, adapters: selectedAdapters });
   };
 
   return (
@@ -114,12 +167,33 @@ export default function TriagePage() {
             />
             <p className="text-xs text-muted-foreground">{`Use Boolean operators. Example: ("hypertension" OR "high blood pressure") AND lifestyle`}</p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Adapters:</span>
-            <BadgeList items={["pubmed", "crossref"]} />
+          <div className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Adapters</span>
+            <div className="flex flex-wrap gap-2">
+              {adapterOptions.map((option) => {
+                const isSelected = selectedAdapters.includes(option.id);
+                return (
+                  <Button
+                    key={option.id}
+                    type="button"
+                    variant={isSelected ? "secondary" : "ghost"}
+                    size="sm"
+                    className="gap-2 px-3 text-xs uppercase tracking-wide"
+                    onClick={() => toggleAdapter(option.id)}
+                    aria-pressed={isSelected}
+                  >
+                    <span>{option.label}</span>
+                  </Button>
+                );
+              })}
+            </div>
+            {!hasAdaptersSelected ? (
+              <p className="text-xs text-destructive">Select at least one adapter to run a search.</p>
+            ) : null}
+            {adapterError ? <p className="text-xs text-destructive">{adapterError}</p> : null}
           </div>
           <div className="flex items-center gap-3">
-            <Button type="submit" disabled={enqueueSearch.isPending || !projectId}>
+            <Button type="submit" disabled={enqueueSearch.isPending || !projectId || !hasAdaptersSelected}>
               {enqueueSearch.isPending ? (
                 <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Enqueuing…</span>
               ) : (
@@ -167,25 +241,6 @@ export default function TriagePage() {
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-type BadgeListProps = {
-  items: string[];
-};
-
-function BadgeList({ items }: BadgeListProps) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((item) => (
-        <span
-          key={item}
-          className="rounded border border-muted-foreground/40 bg-muted px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground"
-        >
-          {item}
-        </span>
-      ))}
     </div>
   );
 }
