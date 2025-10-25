@@ -238,7 +238,7 @@ describe("DraftPage version history", () => {
     const removedSentences = screen.getAllByText(/Beta addition\./i);
     expect(removedSentences.length).toBeGreaterThan(0);
 
-    await screen.findByText(/Restored:/i);
+    await screen.findAllByText(/Restored:/i);
     const restoredSentences = screen.getAllByText(/Gamma insight\./i);
     expect(restoredSentences.length).toBeGreaterThan(0);
 
