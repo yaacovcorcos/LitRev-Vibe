@@ -4,6 +4,12 @@ Track meaningful progress, context, and intent for every substantial change. Eac
 
 ## Entries
 
+### 2025-10-25 — Milestones 1–4 Remediation Wrap-up
+- Documented multi-adapter triage workflow, PDF ingestion pipeline, curator return loop, locator readiness checklist, compose generator, and suggestion diffs across planning/spec/design guides.
+- Added `docs/development/background-jobs.md`, `docs/specs/triage-ledger.md`, `docs/specs/compose.md`, and `docs/specs/draft-versioning.md` to capture new system behavior.
+- Recorded architecture decisions for adapter toggles, PDF ingest, curator return, and AI compose/suggestion pipelines in `DECISIONS.md`.
+- Verified updated Draft page tests covering locator-aware diff previews and ensured full Vitest suite passes.
+
 ### 2025-10-22 — Project CRUD tRPC migration & UI edits
 - Introduced tRPC stack (router, context, app handler) and added `/api/trpc` endpoint using superjson for consistent serialization.
 - Replaced REST-based project hooks with tRPC-powered React Query mutations including optimistic create/update/delete flows and activity logging for lifecycle events.

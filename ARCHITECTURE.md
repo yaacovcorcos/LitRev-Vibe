@@ -16,6 +16,7 @@
 - **Activity Timeline (`src/app/project/[id]/activity`)**: Timeline view of project events backed by React Query hooks and shadcn UI cards.
 - **Triage Workspace (`src/app/project/[id]/triage`)**: Candidate search/triage UI wired to search jobs and React Query hooks.
 - **Evidence Ledger (`src/app/project/[id]/ledger`)**: Vetted reference workspace with inspector for metadata, locators, and integrity signals.
+- **Artifact Storage (`src/lib/storage/`)**: Helpers for persisting candidate PDFs and resolving on-disk/object-storage paths consumed by ledger/AI workflows.
 - **Notifications Workspace (`src/app/notifications`)**: Placeholder page outlining upcoming alert feeds and linking to runs/activity surfaces; prevents navigation dead-ends until real notifications ship.
 - **Automation Scripts (`scripts/`)**: `agent-verify.sh` guardrails, additional automation will live here.
 
@@ -24,12 +25,14 @@
 2. **Next.js app** renders through `AppShell`, providing the persistent sidebar/header frame around routed pages.
 3. **React Query provider** supplies caching/invalidation for client hooks.
 4. **API routes** call Prisma via the shared client, enabling CRUD for projects.
-5. **Queue worker** connects to Redis using shared helper; sample heartbeat job verifies infrastructure.
-6. **Prisma** defines project/research plan/candidate/ledger schemas for upcoming modules.
+5. **Queue worker** connects to Redis using shared helper; search jobs enqueue PDF ingest work which streams artifacts into project-scoped storage and annotates candidates.
+6. **Compose/Suggestion workers** consume verified ledger entries, AI prompts, and stored locator context to generate prose and human-review diffs.
+7. **Prisma** defines project/research plan/candidate/ledger schemas and their versioning/locator metadata.
 
 ## Planned Expansions
 - **tRPC / API Layer**: Will expose typed endpoints for project CRUD, planning, triage. Document routes under `docs/api/TRPC_ROUTES.md` (placeholder).
 - **Adapter Interfaces**: Search (PubMed, Crossref), AI (planning, triage, compose), Export—all will use adapter contracts documented under `docs/api/ADAPTERS.md` (placeholder).
 - **Module READMEs**: Each major folder (`src/app/project`, `src/lib/queue`, etc.) will include purpose, submodules, and public interfaces.
+- **Integrity Safeguards**: Locator readiness checklist (pointer + context + citation verification) blocks ledger verification and compose/export jobs until satisfied; surfaced via `src/lib/ledger/locator-readiness.ts` and UI toasts.
 
 Keep this document updated as new modules are introduced or responsibilities shift.

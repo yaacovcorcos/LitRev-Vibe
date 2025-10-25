@@ -138,40 +138,50 @@ async function persistResults(projectId: string, adapterId: string, response: Se
       select: {
         id: true,
         metadata: true,
+        oaLinks: true,
       },
     });
 
     const mergedMetadata = buildCandidateMetadata(existing?.metadata, result);
-
-    const payload = {
-      projectId,
-      searchAdapter: adapterId,
-      externalIds: sanitizeJson({
-        adapter: adapterId,
-        externalId,
-        doi,
-      }),
-      metadata: sanitizeJson(mergedMetadata),
-      oaLinks: sanitizeJson(oaRecord),
-    } satisfies Prisma.CandidateCreateInput;
+    const metadataJson = sanitizeJson(mergedMetadata);
+    const externalIdsJson = sanitizeJson({
+      adapter: adapterId,
+      externalId,
+      doi,
+    });
+    const hasNewOaRecord = Boolean(oaRecord);
+    const sanitizedOaLinks = hasNewOaRecord ? sanitizeJson(oaRecord) : null;
 
     let candidateId: string;
     let hasPdfArtifact = false;
 
     if (existing) {
+      const updateData: Prisma.CandidateUpdateInput = {
+        metadata: metadataJson,
+        externalIds: externalIdsJson,
+      };
+
+      if (hasNewOaRecord) {
+        updateData.oaLinks = sanitizedOaLinks ?? Prisma.JsonNull;
+      }
+
       await prisma.candidate.update({
         where: { id: existing.id },
-        data: {
-          metadata: payload.metadata,
-          oaLinks: payload.oaLinks,
-          externalIds: payload.externalIds,
-        },
+        data: updateData,
       });
 
       candidateId = existing.id;
       hasPdfArtifact = Boolean(mergedMetadata.pdf && typeof mergedMetadata.pdf === "object");
     } else {
-      const created = await prisma.candidate.create({ data: payload });
+      const createData: Prisma.CandidateCreateInput = {
+        projectId,
+        searchAdapter: adapterId,
+        metadata: metadataJson,
+        externalIds: externalIdsJson,
+        oaLinks: hasNewOaRecord ? sanitizedOaLinks ?? Prisma.JsonNull : Prisma.JsonNull,
+      };
+
+      const created = await prisma.candidate.create({ data: createData });
       candidateId = created.id;
       stored += 1;
     }
@@ -346,11 +356,5 @@ function asJsonObject(value: Prisma.JsonValue | null | undefined) {
 
 function buildCandidateMetadata(existing: Prisma.JsonValue | null | undefined, result: SearchResponse["results"][number]) {
   const base = asJsonObject(existing) ?? {};
-  const merged = { ...base } as Record<string, unknown>;
-
-  Object.entries(result as Record<string, unknown>).forEach(([key, value]) => {
-    merged[key] = value;
-  });
-
-  return merged;
+  return { ...base, ...(result as Record<string, unknown>) };
 }

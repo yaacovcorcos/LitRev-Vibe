@@ -5,6 +5,7 @@ import { updateJobRecord } from "@/lib/jobs";
 import { toInputJson } from "@/lib/prisma/json";
 
 import { assertCitationsValid } from "./citation-validator";
+import { generateComposeDocument } from "./generator";
 import { ensureDraftSectionVersion, recordDraftSectionVersion } from "./versions";
 import {
   type ComposeJobQueuePayload,
@@ -82,7 +83,13 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
 
       validateCitations(sectionState.key, sectionState.ledgerEntryIds, ledgerEntries);
 
-      const content = buildDraftContent(sectionInput.title, sectionInput.sectionType, payload.researchQuestion, payload.narrativeVoice, ledgerEntries);
+      const content = await generateComposeDocument({
+        projectId,
+        section: sectionInput,
+        researchQuestion: payload.researchQuestion,
+        narrativeVoice: payload.narrativeVoice,
+        ledgerEntries,
+      });
       const existingSectionId = sectionState.draftSectionId ?? sectionInput.sectionId ?? null;
 
       const draftSection = await prisma.$transaction(async (tx) => {
@@ -132,6 +139,7 @@ export async function processComposeJob(data: unknown): Promise<ComposeJobResult
           version: record.version,
           status: record.status,
           content: record.content,
+          locators: ledgerEntries.map(primaryLocatorDetails).filter((locator): locator is Record<string, unknown> => Boolean(locator)),
         });
 
         await tx.draftSectionOnLedger.deleteMany({
@@ -336,86 +344,23 @@ function validateCitations(sectionKey: string, ledgerIds: string[], ledgerEntrie
   assertCitationsValid(references, ledgerRecords);
 }
 
-function buildDraftContent(
-  title: string | undefined,
-  sectionType: ComposeJobQueuePayload["sections"][number]["sectionType"],
-  researchQuestion: string | undefined,
-  narrativeVoice: ComposeJobQueuePayload["narrativeVoice"],
-  ledgerEntries: LedgerEntryForCompose[],
-) {
-  const heading = title ?? defaultHeading(sectionType);
-  const voicePrefix = narrativeVoicePrefix(narrativeVoice);
-
-  const paragraphs = ledgerEntries.map((entry, index) => {
-    const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
-    const studyTitle = typeof metadata.title === "string" && metadata.title.trim().length > 0
-      ? metadata.title.trim()
-      : `Source ${index + 1}`;
-    const journal = typeof metadata.journal === "string" ? metadata.journal : null;
-    const year = typeof metadata.publishedAt === "string" ? metadata.publishedAt : null;
-
-    const citationHint = journal || year
-      ? ` (${[journal, year].filter(Boolean).join(", ")})`
-      : "";
-
-    const narrativeSuffix = researchQuestion
-      ? ` This evidence relates to the research question: ${researchQuestion.trim()}.`
-      : "";
-
-    const prefix = voicePrefix ? `${voicePrefix} ` : "";
-
-    return `${prefix}${studyTitle}${citationHint} contributes to the literature review.${narrativeSuffix} [${entry.citationKey}]`;
-  });
-
-  return {
-    type: "doc",
-    content: [
-      {
-        type: "heading",
-        attrs: { level: 2 },
-        content: [{ type: "text", text: heading }],
-      },
-      ...paragraphs.map((text) => ({
-        type: "paragraph",
-        content: [{ type: "text", text }],
-      })),
-    ],
-  };
-}
-
-function defaultHeading(sectionType: ComposeJobQueuePayload["sections"][number]["sectionType"]) {
-  switch (sectionType) {
-    case "literature_review":
-      return "Literature Review";
-    case "introduction":
-      return "Introduction";
-    case "methods":
-      return "Methods";
-    case "results":
-      return "Results";
-    case "discussion":
-      return "Discussion";
-    case "conclusion":
-      return "Conclusion";
-    default:
-      return "Draft Section";
-  }
-}
-
-function narrativeVoicePrefix(narrativeVoice: ComposeJobQueuePayload["narrativeVoice"]) {
-  switch (narrativeVoice) {
-    case "confident":
-      return "The evidence strongly suggests that";
-    case "cautious":
-      return "The available evidence indicates that";
-    default:
-      return "";
-  }
-}
-
 function primaryLocator(entry: LedgerEntryForCompose) {
   const locators = Array.isArray(entry.locators) ? entry.locators : [];
   return locators.length > 0 ? toInputJson(locators[0]) : null;
+}
+
+function primaryLocatorDetails(entry: LedgerEntryForCompose) {
+  const locators = Array.isArray(entry.locators) ? entry.locators : [];
+  if (locators.length === 0) {
+    return null;
+  }
+
+  const primary = locators[0];
+  if (!primary || typeof primary !== "object" || Array.isArray(primary)) {
+    return null;
+  }
+
+  return { ...primary, citationKey: entry.citationKey } as Record<string, unknown>;
 }
 
 function cloneState(state: ComposeJobState) {

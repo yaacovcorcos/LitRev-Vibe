@@ -6,6 +6,8 @@ type DraftVersion = {
   version: number;
   status: string;
   createdAt: string;
+  content: Record<string, unknown> | null;
+  locators?: Array<Record<string, unknown>> | null;
 };
 
 type DraftVersionList = {

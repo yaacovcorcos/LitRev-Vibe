@@ -20,12 +20,17 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `docs/planning/` — Implementation plans (`v1`, `v2`), roadmap details.
 - `docs/development/` — Testing strategy, workflows, and onboarding aids.
 - `docs/development/onboarding-guide.md` — Step-by-step environment + workflow walkthrough for the Milestone 1 slice.
+- `docs/development/background-jobs.md` — Queue definitions, PDF ingest flow, and compose/suggestion worker notes.
 - `docs/reviews/` — QA artifacts and responsive reviews (e.g., `2025-10-15-triage-ledger-cross-device.md`).
 - `docs/design/draft-workspace.md` — Draft workspace interaction patterns (editing, approvals, inspector).
 - `docs/design/design-qa-checklist.md` — Visual regression and accessibility checklist for shell changes.
+- `docs/design/ledger.md` — Inspector checklist UX, curator return actions, and toast behavior.
 - `docs/api/ADAPTERS.md` — Adapter interfaces shared across automation subsystems.
 - `docs/api/TRPC_ROUTES.md` — High-level index of tRPC procedures.
 - `docs/api/search.md` — Search adapter contract, rate limits, and implementation notes for PubMed/Crossref.
+- `docs/specs/triage-ledger.md` — Status lifecycle, return loop, and locator checklist specification.
+- `docs/specs/compose.md` — Compose/suggestion generator prompt contracts and guardrails.
+- `docs/specs/draft-versioning.md` — Snapshot storage, rollback API, and diff preview expectations.
 
 - `app/` — Next.js App Router entry points (`layout.tsx`, `page.tsx`, global styles).
 - `app/api/trpc/[trpc]/route.ts` — tRPC fetch handler exposing the application router.
@@ -34,14 +39,19 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `components/planning/generated-plan-preview.tsx` — Preview panel for AI-generated plan suggestions.
 - `components/activity/` — Activity & undo timeline components.
 - `components/triage/` — Triage candidate cards and listing UI.
+- `components/triage/candidate-card.test.tsx` — Component tests for discard/needs-review actions.
 - `components/draft/` — Draft workspace components (Tiptap editor wrapper, section listing).
 - `components/providers/` — Cross-cutting providers (React Query, etc.).
 - `components/ui/` — shadcn/ui generated primitives (buttons, cards, textarea, etc.).
 - `app/project/[id]/ledger/` — Evidence Ledger workspace surface and inspector.
+- `app/api/projects/[id]/candidates/[candidateId]/needs-review/` — REST endpoint for triage status transitions with curator notes.
+- `app/api/projects/[id]/ledger/[entryId]/return/` — REST endpoint returning ledger entries to triage with transactional rollback.
 - `app/runs/` — Automation runs dashboard showing job progress.
 - `hooks/use-candidate-rationale.ts` — React Query helpers for fetching and asking AI about a candidate.
 - `hooks/use-keep-candidate.ts` — Mutation helper for enforcing locator requirement before keeping to ledger.
 - `hooks/use-ledger.ts` — React Query helper for paginated ledger entries.
+- `hooks/use-needs-review-candidate.ts` — Mutation hook for marking candidates as needs review with optional notes.
+- `hooks/use-return-ledger-entry.ts` — Mutation hook returning ledger entries to triage with optimistic cache updates.
 - `hooks/use-snippet-extraction.ts` — Mutation helper to enqueue locator snippet extraction jobs.
 - `hooks/use-discard-candidate.ts` — Mutation helper for tagging candidates as discarded during triage.
 - `hooks/use-exports.ts` — React Query helpers for export history, metrics, and enqueueing export jobs.
@@ -54,8 +64,14 @@ Quick reference for navigating the repository. Update this index whenever new to
 - `hooks/use-jobs.ts` — Fetch automation job runs with polling.
 - `lib/integrity/` — Integrity feed ingestion stubs, queue jobs, scheduler helpers.
 - `lib/ledger/` — Locator status helpers and related utilities.
+- `lib/ledger/locator-readiness.ts` — Checklist helpers powering locator verification gating.
 - `lib/compose/` — Compose workflow helpers (citation validator, job contracts, worker processor, resumable state utilities).
+- `lib/compose/generator.ts` — OpenAI-backed compose document generator with fallbacks.
+- `lib/compose/generator.test.ts` — Unit coverage for compose generation fallbacks and parsing.
+- `lib/compose/suggestion-generator.ts` — Suggestion diff generator returning structured JSON payloads.
+- `lib/compose/suggestion-generator.test.ts` — Tests for suggestion generator fallbacks and validation.
 - `lib/compose/versions.ts` — Helpers for recording and rolling back draft section versions.
+- `lib/storage/pdf.ts` — Candidate PDF storage resolver helpers.
 - `lib/jobs/` — Job persistence helpers bridging Prisma records with queue metadata.
 - `lib/design-system/` — Design tokens (`tokens.ts`), theme helpers (`theme.ts`).
 - `lib/ai/` — AI orchestration helpers (OpenAI client, triage rationale jobs, Ask-AI).
@@ -86,7 +102,7 @@ Quick reference for navigating the repository. Update this index whenever new to
 
 ## Data & Migrations
 - `prisma/schema.prisma` — Database schema.
-- `prisma/migrations/` — SQL diffs (initial migration).
+- `prisma/migrations/` — SQL diffs (initial migration, PDF locator snapshots).
 - `prisma/seed.ts` — Seed data script.
 
 ## Logs & Builds

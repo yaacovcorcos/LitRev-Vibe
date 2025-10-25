@@ -163,6 +163,7 @@ model DraftSectionVersion {
   version        Int
   status         String
   content        Json
+  locators       Json?
   createdAt      DateTime @default(now())
 
   draftSection DraftSection @relation(fields: [draftSectionId], references: [id], onDelete: Cascade)
