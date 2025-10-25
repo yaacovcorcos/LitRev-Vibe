@@ -38,3 +38,8 @@ Document pivotal architectural or product choices. For each entry, capture the c
 - **Context:** Milestone 1 navigation surfaced a Notifications link that routed to a 404, breaking the shell experience.
 - **Decision:** Ship a client-side `/notifications` page stub describing the upcoming alerting features and linking to Runs, keeping the navigation viable until real feeds land.
 - **Consequences:** Users no longer hit a dead-end when exploring the workspace; remediation plan stays actionable without hiding the destination.
+
+### 2025-10-25 — Project-Aware Navigation Resolution
+- **Context:** The workspace sidebar needed to direct users into project-scoped routes using the currently active project without forcing manual URL editing.
+- **Decision:** Derive the active project ID from the pathname in `Sidebar`, resolve `/project/:id/*` links through helpers in `src/lib/navigation.ts`, and disable project-scoped items when no project context exists.
+- **Consequences:** Navigation stays context-aware across planning, draft, export, and settings surfaces, preventing broken links and clarifying state when no project is selected; regression coverage was added to guarantee routing behavior.

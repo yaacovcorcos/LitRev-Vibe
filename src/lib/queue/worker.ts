@@ -4,6 +4,7 @@ import pino from 'pino';
 import { COMPOSE_QUEUE_JOB_NAME } from "@/lib/compose/jobs";
 import { processComposeJob } from "@/lib/compose/processor";
 import { processSearchJob } from "@/lib/search/jobs";
+import { PDF_INGEST_JOB_NAME, processPdfIngestJob } from "@/lib/search/pdf-ingest";
 import { processTriageRationaleJob } from "@/lib/ai/jobs";
 import { processIntegrityIngestionJob } from "@/lib/integrity/jobs";
 import { processSnippetExtractionJob } from "@/lib/snippets/jobs";
@@ -27,6 +28,8 @@ export const defaultWorker = new Worker(
     switch (job.name) {
       case 'search:execute':
         return processSearchJob(job.data);
+      case PDF_INGEST_JOB_NAME:
+        return processPdfIngestJob(job.data);
       case 'triage:rationale':
         return processTriageRationaleJob(job.data);
       case 'integrity:ingest':

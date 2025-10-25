@@ -9,6 +9,7 @@ import { queues } from "@/lib/queue/queue";
 import { prisma } from "@/lib/prisma";
 import { fetchUnpaywallBatch } from "@/lib/unpaywall";
 import { searchAdapters, type SearchAdapter, type SearchQuery, type SearchResponse } from "@/lib/search";
+import { enqueuePdfIngestJob } from "@/lib/search/pdf-ingest";
 
 function sanitizeJson<T>(value: T): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
@@ -94,9 +95,21 @@ export async function enqueueSearchJob(input: SearchJobInput, options?: JobsOpti
   return jobRecord;
 }
 
+type PersistedCandidate = {
+  id: string;
+  externalId: string;
+  adapterId: string;
+  doi?: string;
+  oaRecord: Record<string, unknown> | null;
+  hasPdfArtifact: boolean;
+};
+
 async function persistResults(projectId: string, adapterId: string, response: SearchResponse) {
   if (response.results.length === 0) {
-    return 0;
+    return {
+      stored: 0,
+      candidates: [] as PersistedCandidate[],
+    };
   }
 
   const dois = response.results
@@ -105,25 +118,75 @@ async function persistResults(projectId: string, adapterId: string, response: Se
 
   const unpaywallRecords = dois.length > 0 ? await fetchUnpaywallBatch(dois) : {};
 
-  const payloads = response.results.map((result) => {
-    const doi = (result.metadata?.doi as string | undefined) ?? undefined;
-    const oaRecord = doi ? unpaywallRecords[doi] ?? null : null;
+  const candidates: PersistedCandidate[] = [];
+  let stored = 0;
 
-    return {
+  for (const result of response.results) {
+    const externalId = result.externalId;
+    const doi = (result.metadata?.doi as string | undefined) ?? undefined;
+    const oaRecord = doi ? (unpaywallRecords[doi] ?? null) : null;
+
+    const existing = await prisma.candidate.findFirst({
+      where: {
+        projectId,
+        searchAdapter: adapterId,
+        externalIds: {
+          path: ["externalId"],
+          equals: externalId,
+        },
+      },
+      select: {
+        id: true,
+        metadata: true,
+      },
+    });
+
+    const mergedMetadata = buildCandidateMetadata(existing?.metadata, result);
+
+    const payload = {
       projectId,
       searchAdapter: adapterId,
       externalIds: sanitizeJson({
         adapter: adapterId,
-        externalId: result.externalId,
+        externalId,
         doi,
       }),
-      metadata: sanitizeJson(result),
+      metadata: sanitizeJson(mergedMetadata),
       oaLinks: sanitizeJson(oaRecord),
-    };
-  });
+    } satisfies Prisma.CandidateCreateInput;
 
-  const { count } = await prisma.candidate.createMany({ data: payloads });
-  return count;
+    let candidateId: string;
+    let hasPdfArtifact = false;
+
+    if (existing) {
+      await prisma.candidate.update({
+        where: { id: existing.id },
+        data: {
+          metadata: payload.metadata,
+          oaLinks: payload.oaLinks,
+          externalIds: payload.externalIds,
+        },
+      });
+
+      candidateId = existing.id;
+      hasPdfArtifact = Boolean(mergedMetadata.pdf && typeof mergedMetadata.pdf === "object");
+    } else {
+      const created = await prisma.candidate.create({ data: payload });
+      candidateId = created.id;
+      stored += 1;
+    }
+
+    candidates.push({
+      id: candidateId,
+      externalId,
+      adapterId,
+      doi,
+      oaRecord: oaRecord as Record<string, unknown> | null,
+      hasPdfArtifact,
+    });
+  }
+
+  return { stored, candidates };
 }
 
 export async function processSearchJob(data: unknown): Promise<SearchJobResult> {
@@ -134,6 +197,8 @@ export async function processSearchJob(data: unknown): Promise<SearchJobResult> 
 
   let totalStored = 0;
   let totalResults = 0;
+
+  const pendingPdfJobs: Promise<unknown>[] = [];
 
   const totalAdapters = adaptersToRun.length || 1;
 
@@ -154,8 +219,34 @@ export async function processSearchJob(data: unknown): Promise<SearchJobResult> 
 
       const response = await adapter.search(payload.query);
       totalResults += response.results.length;
-      const stored = await persistResults(payload.projectId, adapter.id, response);
+
+      const { stored, candidates } = await persistResults(payload.projectId, adapter.id, response);
       totalStored += stored;
+
+      for (const candidate of candidates) {
+        const oaLink = candidate.oaRecord && typeof candidate.oaRecord === "object"
+          ? (candidate.oaRecord.bestOALink as string | undefined)
+          : undefined;
+
+        if (oaLink && !candidate.hasPdfArtifact) {
+          pendingPdfJobs.push(
+            enqueuePdfIngestJob({
+              projectId: payload.projectId,
+              candidateId: candidate.id,
+              searchAdapter: adapter.id,
+              externalId: candidate.externalId,
+              url: oaLink,
+              doi: candidate.doi ?? null,
+            }).catch((error) => {
+              console.warn("Failed to enqueue PDF ingest job", {
+                candidateId: candidate.id,
+                adapter: adapter.id,
+                error,
+              });
+            }),
+          );
+        }
+      }
 
       adapterSummaries.push({ adapter: adapter.id, total: response.results.length, stored });
 
@@ -173,6 +264,10 @@ export async function processSearchJob(data: unknown): Promise<SearchJobResult> 
           },
         },
       }).catch(() => undefined);
+    }
+
+    if (pendingPdfJobs.length > 0) {
+      await Promise.all(pendingPdfJobs);
     }
 
     const result: SearchJobResult = {
@@ -239,4 +334,23 @@ export async function processSearchJob(data: unknown): Promise<SearchJobResult> 
 
     throw error;
   }
+}
+
+function asJsonObject(value: Prisma.JsonValue | null | undefined) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function buildCandidateMetadata(existing: Prisma.JsonValue | null | undefined, result: SearchResponse["results"][number]) {
+  const base = asJsonObject(existing) ?? {};
+  const merged = { ...base } as Record<string, unknown>;
+
+  Object.entries(result as Record<string, unknown>).forEach(([key, value]) => {
+    merged[key] = value;
+  });
+
+  return merged;
 }
