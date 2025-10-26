@@ -111,7 +111,9 @@ describe("buildExportArchive", () => {
     expect(manifestJson).toBeTruthy();
     const parsed = JSON.parse(manifestJson!);
     expect(parsed.files.length).toBe(3);
+    expect(parsed.totalSizeBytes).toBeGreaterThan(0);
     expect(manifest.files).toEqual(parsed.files);
+    expect(manifest.totalSizeBytes).toEqual(parsed.totalSizeBytes);
   });
 
   it("omits optional artifacts when disabled", async () => {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 
 import ProjectExportPage from "./page";
@@ -100,9 +100,15 @@ describe("ProjectExportPage history timeline", () => {
             options: {
               includeLedger: true,
               includePrismaDiagram: true,
+              totalSizeBytes: 2048,
               files: [
-                { name: "manuscript/manuscript.docx", contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
-                { name: "attachments/bibliography.bib", contentType: "text/plain" },
+                {
+                  name: "manuscript/manuscript.docx",
+                  contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                  sizeBytes: 1024,
+                },
+                { name: "attachments/bibliography.bib", contentType: "text/plain", sizeBytes: 512 },
+                { name: "attachments/prisma-diagram.svg", contentType: "image/svg+xml", sizeBytes: 512 },
               ],
             },
             storagePath: "/exports/export-1.zip",
@@ -110,6 +116,7 @@ describe("ProjectExportPage history timeline", () => {
             jobId: "job-1",
             createdAt: "2024-01-10T10:00:00Z",
             completedAt: "2024-01-10T10:02:30Z",
+            durationMs: 150000,
             error: null,
             job: {
               id: "job-1",
@@ -138,9 +145,17 @@ describe("ProjectExportPage history timeline", () => {
     expect(utils.getByText(/prisma included/i)).toBeInTheDocument();
     expect(utils.getByText(/completed in 2m 30s/i)).toBeInTheDocument();
     expect(utils.getByText(/about 2 hours ago/i)).toBeInTheDocument();
+    expect(utils.getByText(/3 files · 2 KB/i)).toBeInTheDocument();
 
     const download = utils.getByRole("link", { name: /download bundle/i });
     expect(download).toHaveAttribute("href", "/api/projects/project-123/exports/export-1/download");
+
+    const toggle = utils.getByRole("button", { name: /view bundle files/i });
+    fireEvent.click(toggle);
+    const fileList = utils.getByLabelText(/export bundle files for docx/i);
+    expect(within(fileList).getByText(/manuscript\/manuscript\.docx/i)).toBeInTheDocument();
+    expect(within(fileList).getByText(/application\/vnd.openxmlformats-officedocument.wordprocessingml.document/i)).toBeInTheDocument();
+    expect(within(fileList).getByText(/1 KB/)).toBeInTheDocument();
   });
 
   it("shows progress for active exports", () => {
@@ -154,6 +169,7 @@ describe("ProjectExportPage history timeline", () => {
             options: {
               includeLedger: true,
               includePrismaDiagram: false,
+              totalSizeBytes: 0,
               files: [],
             },
             storagePath: null,
@@ -161,6 +177,7 @@ describe("ProjectExportPage history timeline", () => {
             jobId: "job-2",
             createdAt: "2024-01-10T11:00:00Z",
             completedAt: null,
+            durationMs: null,
             error: null,
             job: {
               id: "job-2",

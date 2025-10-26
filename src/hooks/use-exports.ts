@@ -22,6 +22,7 @@ export type ExportHistoryItem = {
   jobId: string | null;
   createdAt: string;
   completedAt: string | null;
+  durationMs: number | null;
   error: unknown;
   job: ExportJobInfo | null;
 };

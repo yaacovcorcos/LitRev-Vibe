@@ -42,6 +42,8 @@ type TimelineEntry = {
   includeLedger: boolean;
   includePrisma: boolean;
   fileCount: number;
+  files: Array<{ name: string; contentType: string; sizeBytes: number }>;
+  totalSizeLabel: string | null;
   isActive: boolean;
   downloadUrl: string | null;
   progressPercent: number | null;
@@ -477,7 +479,8 @@ function buildMetricsPresentation(metrics: ExportMetrics) {
 type ParsedManifest = {
   includeLedger?: boolean;
   includePrismaDiagram?: boolean;
-  files: Array<{ name: string; contentType: string }>;
+  files: Array<{ name: string; contentType: string; sizeBytes: number }>;
+  totalSizeBytes?: number;
 };
 
 function buildTimeline(entries: ExportHistoryItem[], projectId: string | null): TimelineEntry[] {
@@ -499,11 +502,12 @@ function buildTimeline(entries: ExportHistoryItem[], projectId: string | null): 
       const createdRelative = formatDistanceToNow(createdAt, { addSuffix: true });
 
       let durationLabel: string | null = null;
-      if (completedAt) {
-        const duration = completedAt.getTime() - createdAt.getTime();
-        if (duration > 0) {
-          durationLabel = formatDuration(duration);
-        }
+      const durationMs = typeof item.durationMs === "number" ? item.durationMs : null;
+      const completedRuntime = completedAt ? completedAt.getTime() - createdAt.getTime() : null;
+
+      const settledDuration = durationMs ?? completedRuntime;
+      if (settledDuration && settledDuration > 0) {
+        durationLabel = formatDuration(settledDuration);
       } else if (isActive) {
         const elapsed = Date.now() - createdAt.getTime();
         if (elapsed > 0) {
@@ -515,6 +519,7 @@ function buildTimeline(entries: ExportHistoryItem[], projectId: string | null): 
       const progressPercent = deriveProgressPercent(item.job?.progress ?? null);
       const progressLabel = buildProgressLabel(item.status, progressPercent, item.job?.status ?? null);
       const errorMessage = deriveErrorMessage(item.error);
+      const totalSizeLabel = manifest?.totalSizeBytes ? formatBytes(manifest.totalSizeBytes) : null;
 
       return {
         id: item.id,
@@ -528,6 +533,8 @@ function buildTimeline(entries: ExportHistoryItem[], projectId: string | null): 
         includeLedger,
         includePrisma,
         fileCount,
+        files: manifest?.files ?? [],
+        totalSizeLabel,
         isActive,
         downloadUrl,
         progressPercent,
@@ -549,14 +556,21 @@ function parseExportManifest(options: Record<string, unknown> | null | undefined
   const files = Array.isArray(manifest.files)
     ? manifest.files.filter(
         (file): file is ParsedManifest["files"][number] =>
-          Boolean(file && typeof file.name === "string" && typeof file.contentType === "string"),
+          Boolean(
+            file &&
+              typeof file.name === "string" &&
+              typeof file.contentType === "string" &&
+              typeof file.sizeBytes === "number",
+          ),
       )
     : [];
+  const totalSizeBytes = typeof manifest.totalSizeBytes === "number" ? manifest.totalSizeBytes : undefined;
 
   return {
     includeLedger,
     includePrismaDiagram,
     files,
+    totalSizeBytes,
   };
 }
 
@@ -578,6 +592,22 @@ function deriveProgressPercent(value: number | null): number | null {
 
   const clamped = Math.max(0, Math.min(1, value));
   return Math.round(clamped * 100);
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return "";
+  }
+
+  if (bytes === 0) {
+    return "0 B";
+  }
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const exponent = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  const value = bytes / 1024 ** exponent;
+  const displayValue = value < 10 && exponent > 0 ? Number(value.toFixed(1)).toString() : Math.round(value).toString();
+  return `${displayValue} ${units[exponent]}`;
 }
 
 function buildProgressLabel(status: ExportHistoryItem["status"], percent: number | null, jobStatus: string | null): string | null {
@@ -699,6 +729,7 @@ function TimelineEntryItem({ entry }: { entry: TimelineEntry }) {
   const markerClasses = MARKER_CLASS_MAP[entry.statusDisplay.tone];
   const badgeClasses = BADGE_CLASS_MAP[entry.statusDisplay.tone];
   const formatLabel = entry.format.toUpperCase();
+  const [filesOpen, setFilesOpen] = useState(false);
 
   return (
     <li className="relative pl-8">
@@ -738,7 +769,7 @@ function TimelineEntryItem({ entry }: { entry: TimelineEntry }) {
           </Badge>
           {entry.fileCount > 0 ? (
             <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-              {entry.fileCount} files
+              {entry.fileCount} files{entry.totalSizeLabel ? ` · ${entry.totalSizeLabel}` : ""}
             </Badge>
           ) : null}
         </div>
@@ -759,6 +790,39 @@ function TimelineEntryItem({ entry }: { entry: TimelineEntry }) {
           <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">
             <AlertTriangle className="mt-0.5 h-4 w-4" />
             <span>{entry.errorMessage}</span>
+          </div>
+        ) : null}
+
+        {entry.files.length > 0 ? (
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setFilesOpen((value) => !value)}
+              aria-expanded={filesOpen}
+              aria-controls={`export-files-${entry.id}`}
+            >
+              <span className="underline-offset-4 hover:underline">{filesOpen ? "Hide" : "View"} bundle files</span>
+            </Button>
+            {filesOpen ? (
+              <ul
+                id={`export-files-${entry.id}`}
+                className="space-y-1 rounded-md border border-border/60 bg-muted/20 p-3 text-xs"
+                aria-label={`Export bundle files for ${entry.format}`}
+              >
+                {entry.files.map((file) => (
+                  <li key={file.name} className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                      {file.contentType}
+                    </Badge>
+                    <span className="text-foreground/80">{file.name}</span>
+                    <span className="text-muted-foreground">· {formatBytes(file.sizeBytes)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : null}
 
