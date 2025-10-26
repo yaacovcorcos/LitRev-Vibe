@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowDownToLine, BadgeCheck, Info, Loader2, Rocket, Ban } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDownToLine,
+  BadgeCheck,
+  CheckCircle2,
+  Clock3,
+  Info,
+  Loader2,
+  Rocket,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,11 +22,49 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useProject } from "@/hooks/use-projects";
 import { useExportHistory, useExportMetrics, useEnqueueExport, usePrismaDiagram } from "@/hooks/use-exports";
 import type { ExportMetrics, ExportHistoryItem } from "@/hooks/use-exports";
-import { getExportStatusDisplay } from "@/lib/export/status";
+import { getExportStatusDisplay, type ExportStatusDisplay } from "@/lib/export/status";
+import { cn } from "@/lib/utils";
 import { formatDistanceToNow, format } from "date-fns";
 
 type RouteParams = {
   id?: string;
+};
+
+type TimelineEntry = {
+  id: string;
+  status: ExportHistoryItem["status"];
+  statusDisplay: ExportStatusDisplay;
+  format: string;
+  createdAt: Date;
+  completedAt: Date | null;
+  createdRelative: string;
+  durationLabel: string | null;
+  includeLedger: boolean;
+  includePrisma: boolean;
+  fileCount: number;
+  isActive: boolean;
+  downloadUrl: string | null;
+  progressPercent: number | null;
+  progressLabel: string | null;
+  errorMessage: string | null;
+};
+
+type ExportStatusTone = ExportStatusDisplay["tone"];
+
+const ACTIVE_STATUSES: ReadonlySet<ExportHistoryItem["status"]> = new Set(["pending", "queued", "in_progress"]);
+
+const BADGE_CLASS_MAP: Record<ExportStatusTone, string> = {
+  success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  warning: "border-amber-200 bg-amber-50 text-amber-700",
+  destructive: "border-destructive/40 bg-destructive/10 text-destructive",
+  default: "border-border bg-muted/30 text-muted-foreground",
+};
+
+const MARKER_CLASS_MAP: Record<ExportStatusTone, string> = {
+  success: "border-emerald-300 bg-emerald-50 text-emerald-600",
+  warning: "border-amber-300 bg-amber-50 text-amber-600",
+  destructive: "border-destructive bg-destructive/15 text-destructive",
+  default: "border-border bg-background text-muted-foreground",
 };
 
 export default function ProjectExportPage() {
@@ -43,6 +90,8 @@ export default function ProjectExportPage() {
 
   const metrics = metricsQuery.data?.metrics ?? null;
   const history = historyQuery.data?.exports ?? [];
+  const timelineEntries = useMemo(() => buildTimeline(history, projectId), [history, projectId]);
+  const hasHistory = timelineEntries.length > 0;
 
   const formatOptions = useMemo(() => exportSettings?.enabledFormats ?? [], [exportSettings]);
 
@@ -246,14 +295,10 @@ export default function ProjectExportPage() {
         <CardContent>
           {historyQuery.isLoading ? (
             <HistorySkeleton />
-          ) : history.length === 0 ? (
+          ) : !hasHistory ? (
             <EmptyState message="No exports yet. Generate your first export to see it here." />
           ) : (
-            <ul className="space-y-4">
-              {history.map((item) => (
-                <HistoryItem key={item.id} projectId={projectId} item={item} />
-              ))}
-            </ul>
+            <HistoryTimeline entries={timelineEntries} />
           )}
         </CardContent>
       </Card>
@@ -429,129 +474,193 @@ function buildMetricsPresentation(metrics: ExportMetrics) {
   };
 }
 
-function HistoryItem({ projectId, item }: { projectId: string | null; item: ExportHistoryItem }) {
-  const statusDisplay = getExportStatusDisplay(item.status);
-  const createdAt = format(new Date(item.createdAt), "PPpp");
-  const progress = item.job?.progress ?? null;
-  const isInProgress = item.status === "queued" || item.status === "in_progress";
-  const downloadUrl = item.status === "completed" && projectId
-    ? `/api/projects/${projectId}/exports/${item.id}/download`
-    : null;
-  const manifest = parseManifest(item.options);
+type ParsedManifest = {
+  includeLedger?: boolean;
+  includePrismaDiagram?: boolean;
+  files: Array<{ name: string; contentType: string }>;
+};
 
-  return (
-    <li className="rounded-lg border border-border bg-card p-4 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="uppercase tracking-wide">
-              {item.format}
-            </Badge>
-            <StatusBadge status={statusDisplay} />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Requested {createdAt}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {downloadUrl ? (
-            <Button asChild size="sm" title="Download manuscript, bibliography, and PRISMA diagram">
-              <Link href={downloadUrl} prefetch={false}>
-                <ArrowDownToLine className="mr-2 h-4 w-4" /> Download bundle
-              </Link>
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      {isInProgress ? (
-        <div className="mt-3">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Exporting…</span>
-            <span>{progress !== null ? `${Math.round(progress * 100)}%` : ""}</span>
-          </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded bg-muted">
-            <div
-              className="h-full rounded bg-primary transition-all"
-              style={{ width: `${Math.round((progress ?? 0) * 100)}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
-      {item.status === "failed" && item.error ? (
-        <p className="mt-3 flex items-start gap-2 text-xs text-destructive">
-          <Ban className="mt-0.5 h-4 w-4" />
-          <span>{renderErrorMessage(item.error)}</span>
-        </p>
-      ) : null}
-      {manifest && manifest.files.length > 0 ? (
-        <div className="mt-3 space-y-2 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground">Bundle contents</p>
-          <ul className="space-y-1">
-            {manifest.files.map((file) => (
-              <li key={file.name} className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                  {file.contentType}
-                </Badge>
-                <span className="text-muted-foreground/80">{file.name}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </li>
-  );
+function buildTimeline(entries: ExportHistoryItem[], projectId: string | null): TimelineEntry[] {
+  return entries
+    .map((item) => {
+      const createdAt = safeDate(item.createdAt);
+      if (!createdAt) {
+        return null;
+      }
+
+      const completedAt = safeDate(item.completedAt);
+      const manifest = parseExportManifest(item.options);
+      const includeLedger = manifest?.includeLedger ?? deriveBooleanOption(item.options, ["includeLedger", "includeLedgerExport"]) ?? false;
+      const includePrisma = manifest?.includePrismaDiagram ?? deriveBooleanOption(item.options, ["includePrismaDiagram", "includePrisma"]) ?? false;
+      const fileCount = manifest?.files.length ?? 0;
+
+      const statusDisplay = getExportStatusDisplay(item.status);
+      const isActive = ACTIVE_STATUSES.has(item.status);
+      const createdRelative = formatDistanceToNow(createdAt, { addSuffix: true });
+
+      let durationLabel: string | null = null;
+      if (completedAt) {
+        const duration = completedAt.getTime() - createdAt.getTime();
+        if (duration > 0) {
+          durationLabel = formatDuration(duration);
+        }
+      } else if (isActive) {
+        const elapsed = Date.now() - createdAt.getTime();
+        if (elapsed > 0) {
+          durationLabel = formatDuration(elapsed);
+        }
+      }
+
+      const downloadUrl = item.status === "completed" && projectId ? `/api/projects/${projectId}/exports/${item.id}/download` : null;
+      const progressPercent = deriveProgressPercent(item.job?.progress ?? null);
+      const progressLabel = buildProgressLabel(item.status, progressPercent, item.job?.status ?? null);
+      const errorMessage = deriveErrorMessage(item.error);
+
+      return {
+        id: item.id,
+        status: item.status,
+        statusDisplay,
+        format: item.format,
+        createdAt,
+        completedAt,
+        createdRelative,
+        durationLabel,
+        includeLedger,
+        includePrisma,
+        fileCount,
+        isActive,
+        downloadUrl,
+        progressPercent,
+        progressLabel,
+        errorMessage,
+      } satisfies TimelineEntry;
+    })
+    .filter((entry): entry is TimelineEntry => Boolean(entry));
 }
 
-function StatusBadge({ status }: { status: ReturnType<typeof getExportStatusDisplay> }) {
-  const variant = status.tone === "success" ? "default" : status.tone === "destructive" ? "destructive" : "outline";
-  return <Badge variant={variant}>{status.label}</Badge>;
+function parseExportManifest(options: Record<string, unknown> | null | undefined): ParsedManifest | null {
+  if (!options || typeof options !== "object") {
+    return null;
+  }
+
+  const manifest = options as Partial<ParsedManifest>;
+  const includeLedger = typeof manifest.includeLedger === "boolean" ? manifest.includeLedger : undefined;
+  const includePrismaDiagram = typeof manifest.includePrismaDiagram === "boolean" ? manifest.includePrismaDiagram : undefined;
+  const files = Array.isArray(manifest.files)
+    ? manifest.files.filter(
+        (file): file is ParsedManifest["files"][number] =>
+          Boolean(file && typeof file.name === "string" && typeof file.contentType === "string"),
+      )
+    : [];
+
+  return {
+    includeLedger,
+    includePrismaDiagram,
+    files,
+  };
 }
 
-function renderErrorMessage(value: unknown) {
+function deriveBooleanOption(options: Record<string, unknown>, keys: string[]): boolean | null {
+  for (const key of keys) {
+    const value = options[key];
+    if (typeof value === "boolean") {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function deriveProgressPercent(value: number | null): number | null {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return null;
+  }
+
+  const clamped = Math.max(0, Math.min(1, value));
+  return Math.round(clamped * 100);
+}
+
+function buildProgressLabel(status: ExportHistoryItem["status"], percent: number | null, jobStatus: string | null): string | null {
+  if (status === "completed") {
+    return "Export ready";
+  }
+
+  if (status === "failed") {
+    return "Export failed";
+  }
+
+  if (status === "in_progress") {
+    if (percent !== null) {
+      return `Processing export (${percent}%)`;
+    }
+    if (jobStatus) {
+      return `Processing export (${jobStatus})`;
+    }
+    return "Processing export";
+  }
+
+  if (status === "queued") {
+    return "Queued for worker";
+  }
+
+  if (status === "pending") {
+    return "Awaiting worker";
+  }
+
+  return null;
+}
+
+function deriveErrorMessage(value: unknown): string | null {
   if (!value) {
-    return "Export failed.";
+    return null;
   }
 
   if (typeof value === "string") {
     return value;
   }
 
-  if (typeof value === "object" && value && "message" in value && typeof value.message === "string") {
-    return value.message;
+  if (typeof value === "object" && value && "message" in value && typeof (value as { message?: unknown }).message === "string") {
+    return String((value as { message: string }).message);
   }
 
   return "Export failed.";
 }
 
-type Manifest = {
-  files: Array<{ name: string; contentType: string }>;
-};
-
-function parseManifest(options: Record<string, unknown>) {
-  const isProd = process.env.NODE_ENV === "production";
-
-  if (!options || typeof options !== "object") {
-    if (!isProd) {
-      console.warn("export: manifest options missing or invalid", options);
-    }
+function safeDate(value: string | Date | null | undefined): Date | null {
+  if (!value) {
     return null;
   }
 
-  const manifest = options as Partial<Manifest>;
-  const files = Array.isArray(manifest.files) ? manifest.files : undefined;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
 
-  if (!files) {
-    if (!isProd) {
-      console.warn("export: manifest missing files array", options);
-    }
-    return null;
+function formatDuration(milliseconds: number): string {
+  if (!Number.isFinite(milliseconds) || milliseconds <= 0) {
+    return "<1s";
   }
 
-  const normalized = files.filter((file): file is Manifest["files"][number] => Boolean(file?.name));
-
-  if (normalized.length === 0 && !isProd) {
-    console.warn("export: manifest contains zero files", options);
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  if (totalSeconds < 1) {
+    return "<1s";
   }
 
-  return normalized.length > 0 ? { files: normalized } : null;
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const parts: string[] = [];
+  if (hours > 0) {
+    parts.push(`${hours}h`);
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes}m`);
+  }
+  if (seconds > 0 || parts.length === 0) {
+    parts.push(`${seconds}s`);
+  }
+
+  return parts.join(" ");
 }
 
 type CalloutTone = "notice" | "warning" | "destructive";
@@ -570,11 +679,138 @@ function Callout({ tone, children }: { tone: CalloutTone; children: React.ReactN
     </div>
   );
 }
+
+function HistoryTimeline({ entries }: { entries: TimelineEntry[] }) {
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return (
+    <ol className="relative space-y-4 border-l border-border/60 pl-6">
+      {entries.map((entry) => (
+        <TimelineEntryItem key={entry.id} entry={entry} />
+      ))}
+    </ol>
+  );
+}
+
+function TimelineEntryItem({ entry }: { entry: TimelineEntry }) {
+  const Icon = entry.status === "completed" ? CheckCircle2 : entry.status === "failed" ? AlertTriangle : entry.status === "in_progress" ? Loader2 : Clock3;
+  const markerClasses = MARKER_CLASS_MAP[entry.statusDisplay.tone];
+  const badgeClasses = BADGE_CLASS_MAP[entry.statusDisplay.tone];
+  const formatLabel = entry.format.toUpperCase();
+
+  return (
+    <li className="relative pl-8">
+      <span
+        className={cn(
+          "absolute left-[-12px] top-6 flex h-6 w-6 items-center justify-center rounded-full border bg-background",
+          markerClasses,
+          entry.status === "in_progress" ? "ring-2 ring-primary/30" : null,
+        )}
+        aria-hidden
+      >
+        <Icon className={cn("h-3.5 w-3.5", entry.status === "in_progress" ? "animate-spin" : undefined)} />
+      </span>
+
+      <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/80 p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide">
+            <Badge variant="outline" className="text-[11px] font-medium">
+              {formatLabel}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={cn("gap-1 text-[11px] font-medium", badgeClasses)}
+            >
+              {entry.statusDisplay.label}
+            </Badge>
+          </div>
+          <span className="text-xs text-muted-foreground">{entry.createdRelative}</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+            {entry.includeLedger ? "Ledger attached" : "Ledger skipped"}
+          </Badge>
+          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+            {entry.includePrisma ? "PRISMA included" : "PRISMA skipped"}
+          </Badge>
+          {entry.fileCount > 0 ? (
+            <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+              {entry.fileCount} files
+            </Badge>
+          ) : null}
+        </div>
+
+        {entry.isActive ? (
+          <div className="space-y-2">
+            <ProgressBar value={entry.progressPercent} />
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>{entry.progressLabel ?? "Processing export"}</span>
+              {entry.durationLabel ? <span>• {entry.durationLabel} elapsed</span> : null}
+            </div>
+          </div>
+        ) : entry.durationLabel ? (
+          <p className="text-xs text-muted-foreground">Completed in {entry.durationLabel}</p>
+        ) : null}
+
+        {entry.status === "failed" && entry.errorMessage ? (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">
+            <AlertTriangle className="mt-0.5 h-4 w-4" />
+            <span>{entry.errorMessage}</span>
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>
+            Started {format(entry.createdAt, "PPpp")}
+            {entry.completedAt ? ` • Finished ${format(entry.completedAt, "PPpp")}` : ""}
+          </span>
+          {entry.downloadUrl ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link href={entry.downloadUrl} prefetch={false}>
+                <ArrowDownToLine className="mr-2 h-4 w-4" /> Download bundle
+              </Link>
+            </Button>
+          ) : entry.isActive ? (
+            <span className="italic text-muted-foreground">Export running…</span>
+          ) : null}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function ProgressBar({ value }: { value: number | null }) {
+  const clamped = Math.max(0, Math.min(100, value ?? 0));
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        role="presentation"
+        aria-hidden
+        className="h-full rounded-full bg-primary transition-all"
+        style={{ width: `${clamped}%` }}
+      />
+    </div>
+  );
+}
+
 function HistorySkeleton() {
   return (
-    <div className="space-y-3">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <Skeleton key={index} className="h-16 w-full" />
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="relative pl-8">
+          <div className="absolute left-[-10px] top-6 h-3 w-3 rounded-full bg-muted" />
+          <div className="space-y-3 rounded-lg border border-border/60 bg-card/70 p-4">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+            <Skeleton className="h-3 w-4/5" />
+            <Skeleton className="h-2 w-full" />
+          </div>
+        </div>
       ))}
     </div>
   );
