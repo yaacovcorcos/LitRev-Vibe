@@ -53,11 +53,22 @@ const adapters: Partial<Record<ExportFormat, ExportAdapter>> = {
         for (const entry of context.ledgerEntries) {
           const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
           const title = typeof metadata.title === "string" ? metadata.title : entry.citationKey;
-          const journal = typeof metadata.journal === "string" ? metadata.journal : null;
-          const year = typeof metadata.publishedAt === "string" ? metadata.publishedAt : null;
-          const summary = [journal, year].filter(Boolean).join(", ");
+          const summary = formatLedgerSummary(metadata);
+          const authors = formatAuthorList(metadata);
+          const doi = extractIdentifier(metadata, ["doi", "DOI"]);
+          const url = extractIdentifier(metadata, ["url", "URL", "link"]);
 
           lines.push(`- **${entry.citationKey}** — ${title}${summary ? ` (${summary})` : ""}`);
+
+          if (authors) {
+            lines.push(`  - Authors: ${authors}`);
+          }
+
+          if (doi) {
+            lines.push(`  - DOI: ${doi}`);
+          } else if (url) {
+            lines.push(`  - Link: ${url}`);
+          }
         }
       }
 
@@ -79,24 +90,12 @@ const adapters: Partial<Record<ExportFormat, ExportAdapter>> = {
   bibtex: {
     format: "bibtex",
     generate: async (context) => {
-      const entries = context.ledgerEntries.map((entry) => {
-        const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
-        const title = safeBibtexValue(metadata.title);
-        const journal = safeBibtexValue(metadata.journal);
-        const year = safeBibtexValue(metadata.publishedAt ?? metadata.year);
-        const doi = safeBibtexValue(metadata.doi ?? metadata.DOI);
-
-        const fields: string[] = [];
-        if (title) fields.push(`  title = {${title}}`);
-        if (journal) fields.push(`  journal = {${journal}}`);
-        if (year) fields.push(`  year = {${year}}`);
-        if (doi) fields.push(`  doi = {${doi}}`);
-
-        return [`@article{${entry.citationKey},`, fields.join(",\n"), "}\n"].filter(Boolean).join("\n");
-      });
+      const records = context.ledgerEntries
+        .map((entry, index) => buildBibtexRecord(entry, index))
+        .filter((record): record is string => Boolean(record));
 
       return {
-        data: entries.join("\n"),
+        data: records.join("\n\n"),
         extension: "bib",
         contentType: "application/x-bibtex",
       };
@@ -182,11 +181,324 @@ const adapters: Partial<Record<ExportFormat, ExportAdapter>> = {
 };
 
 function safeBibtexValue(value: unknown) {
-  if (typeof value !== "string" || value.trim().length === 0) {
+  if (value === null || value === undefined) {
     return null;
   }
 
-  return value.replace(/[{}]/g, "");
+  if (typeof value === "number") {
+    return String(value);
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  return trimmed.replace(/[{}]/g, "");
+}
+
+function extractFirstString(metadata: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function extractIdentifier(metadata: Record<string, unknown>, keys: string[]): string | null {
+  return extractFirstString(metadata, keys) ?? null;
+}
+
+type WorkKind = "article" | "conference" | "book" | "other";
+
+function determineWorkKind(metadata: Record<string, unknown>): WorkKind {
+  const rawType = extractFirstString(metadata, ["type"]);
+  if (rawType) {
+    const type = rawType.toLowerCase();
+    if (type.includes("conference") || type.includes("proceeding")) {
+      return "conference";
+    }
+    if (type.includes("book")) {
+      return "book";
+    }
+    if (type.includes("article")) {
+      return "article";
+    }
+  }
+
+  if (extractFirstString(metadata, ["journal", "containerTitle", "container_title", "container"])) {
+    return "article";
+  }
+
+  if (extractFirstString(metadata, ["bookTitle", "book_title", "conference", "conferenceName", "event"])) {
+    return "conference";
+  }
+
+  if (extractFirstString(metadata, ["publisher", "organization"])) {
+    return "book";
+  }
+
+  return "other";
+}
+
+function mapWorkKindToBibtex(kind: WorkKind): string {
+  switch (kind) {
+    case "conference":
+      return "inproceedings";
+    case "book":
+      return "book";
+    case "article":
+      return "article";
+    default:
+      return "misc";
+  }
+}
+
+function mapWorkKindToCsl(kind: WorkKind): string {
+  switch (kind) {
+    case "conference":
+      return "paper-conference";
+    case "book":
+      return "book";
+    case "article":
+      return "article-journal";
+    default:
+      return "report";
+  }
+}
+
+function extractContainerTitle(metadata: Record<string, unknown>): string | undefined {
+  return extractFirstString(metadata, [
+    "journal",
+    "containerTitle",
+    "container_title",
+    "container",
+    "bookTitle",
+    "book_title",
+    "collectionTitle",
+    "collection_title",
+    "conference",
+    "conferenceName",
+    "event",
+    "source",
+  ]);
+}
+
+function extractLocation(metadata: Record<string, unknown>): string | undefined {
+  return extractFirstString(metadata, [
+    "location",
+    "address",
+    "place",
+    "publisherLocation",
+    "publisher_place",
+    "city",
+  ]);
+}
+
+function formatLedgerSummary(metadata: Record<string, unknown>) {
+  const kind = determineWorkKind(metadata);
+  const details: string[] = [];
+  const container = extractContainerTitle(metadata);
+  const publisher = extractFirstString(metadata, ["publisher", "organization"]);
+  const location = extractLocation(metadata);
+  const year = extractYear(extractFirstString(metadata, ["publishedAt", "year", "date"])) ?? undefined;
+
+  if (kind === "article") {
+    if (container) {
+      details.push(container);
+    }
+  } else if (kind === "conference") {
+    if (container) {
+      details.push(container);
+    }
+    if (location) {
+      details.push(location);
+    }
+  } else if (kind === "book") {
+    if (publisher) {
+      details.push(publisher);
+    }
+    if (location) {
+      details.push(location);
+    }
+  } else if (container) {
+    details.push(container);
+  }
+
+  if (year) {
+    details.push(String(year));
+  }
+
+  return details.join(", ");
+}
+
+function formatAuthorList(metadata: Record<string, unknown>): string | null {
+  const authors = normalizeAuthors(metadata.authors ?? metadata.author);
+  if (!authors || authors.length === 0) {
+    return null;
+  }
+
+  const formatted = authors
+    .map((author) => [author.given, author.family].filter((part) => part && part.trim().length > 0).join(" ").trim())
+    .filter((name) => name.length > 0)
+    .join("; ");
+
+  return formatted.length > 0 ? formatted : null;
+}
+
+function formatBibtexAuthors(metadata: Record<string, unknown>): string | null {
+  const authors = normalizeAuthors(metadata.authors ?? metadata.author);
+  if (!authors || authors.length === 0) {
+    return null;
+  }
+
+  const formatted = authors
+    .map((author) => {
+      const family = author.family?.trim();
+      const given = author.given?.trim();
+      if (family && given) {
+        return `${family}, ${given}`;
+      }
+      return family || given || "";
+    })
+    .filter((name) => name.length > 0)
+    .join(" and ");
+
+  return formatted.length > 0 ? formatted : null;
+}
+
+function buildBibtexRecord(entry: ExportContext["ledgerEntries"][number], index: number): string | null {
+  const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
+  const kind = determineWorkKind(metadata);
+  const bibType = mapWorkKindToBibtex(kind);
+
+  const fields = new Map<string, string>();
+
+  const authors = formatBibtexAuthors(metadata);
+  if (authors) {
+    fields.set("author", safeBibtexValue(authors)!);
+  }
+
+  const title = safeBibtexValue(extractFirstString(metadata, ["title"]) ?? entry.citationKey);
+  if (title) {
+    fields.set("title", title);
+  }
+
+  const container = extractContainerTitle(metadata);
+  if (kind === "article" && container) {
+    const journal = safeBibtexValue(container);
+    if (journal) {
+      fields.set("journal", journal);
+    }
+  } else if (kind === "conference") {
+    const bookTitle = safeBibtexValue(container ?? extractFirstString(metadata, ["booktitle"]));
+    if (bookTitle) {
+      fields.set("booktitle", bookTitle);
+    }
+    const organization = safeBibtexValue(extractFirstString(metadata, ["organization", "publisher"]));
+    if (organization) {
+      fields.set("organization", organization);
+    }
+    const address = safeBibtexValue(extractLocation(metadata));
+    if (address) {
+      fields.set("address", address);
+    }
+  } else if (kind === "book") {
+    const publisher = safeBibtexValue(extractFirstString(metadata, ["publisher", "organization"]));
+    if (publisher) {
+      fields.set("publisher", publisher);
+    }
+    const address = safeBibtexValue(extractLocation(metadata));
+    if (address) {
+      fields.set("address", address);
+    }
+    const isbn = safeBibtexValue(extractFirstString(metadata, ["isbn", "ISBN"]));
+    if (isbn) {
+      fields.set("isbn", isbn);
+    }
+  } else if (container) {
+    const howPublished = safeBibtexValue(container);
+    if (howPublished) {
+      fields.set("howpublished", howPublished);
+    }
+  }
+
+  const volume = safeBibtexValue(extractFirstString(metadata, ["volume"]));
+  if (volume) {
+    fields.set("volume", volume);
+  }
+
+  const issue = safeBibtexValue(extractFirstString(metadata, ["issue", "number"]));
+  if (issue) {
+    fields.set("number", issue);
+  }
+
+  const pages = safeBibtexValue(extractFirstString(metadata, ["pages", "page"]));
+  if (pages) {
+    fields.set("pages", pages);
+  }
+
+  const year = extractYear(extractFirstString(metadata, ["publishedAt", "year", "date"])) ?? undefined;
+  if (year) {
+    fields.set("year", String(year));
+  }
+
+  const doi = safeBibtexValue(extractFirstString(metadata, ["doi", "DOI"]));
+  if (doi) {
+    fields.set("doi", doi);
+  }
+
+  const url = safeBibtexValue(extractFirstString(metadata, ["url", "URL", "link"]));
+  if (url) {
+    fields.set("url", url);
+  }
+
+  if (fields.size === 0) {
+    return null;
+  }
+
+  const fieldOrder = [
+    "author",
+    "title",
+    "journal",
+    "booktitle",
+    "publisher",
+    "organization",
+    "howpublished",
+    "year",
+    "volume",
+    "number",
+    "pages",
+    "address",
+    "isbn",
+    "doi",
+    "url",
+  ];
+
+  const ordered = fieldOrder
+    .filter((field) => fields.has(field))
+    .map((field) => `  ${field} = {${fields.get(field)}}`);
+
+  const remaining = Array.from(fields.entries())
+    .filter(([field]) => !fieldOrder.includes(field))
+    .map(([field, value]) => `  ${field} = {${value}}`);
+
+  const allLines = [...ordered, ...remaining];
+  const formatted = allLines.map((line, index) => (index === allLines.length - 1 ? line : `${line},`));
+
+  const key = entry.citationKey && entry.citationKey.trim().length > 0 ? entry.citationKey : `entry_${index + 1}`;
+
+  return [`@${bibType}{${key},`, ...formatted, "}"].join("\n");
 }
 
 function buildBibliography(context: ExportContext) {
@@ -223,10 +535,13 @@ function buildBibliography(context: ExportContext) {
 function formatVancouverBibliography(entry: ExportContext["ledgerEntries"][number], index: number) {
   const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
   const title = typeof metadata.title === "string" ? metadata.title : entry.citationKey;
-  const journal = typeof metadata.journal === "string" ? metadata.journal : undefined;
-  const year = extractYear(metadata.publishedAt ?? metadata.year);
-  const doi = typeof metadata.doi === "string" ? metadata.doi : undefined;
-  const url = typeof metadata.url === "string" ? metadata.url : undefined;
+  const kind = determineWorkKind(metadata);
+  const container = extractContainerTitle(metadata);
+  const publisher = extractFirstString(metadata, ["publisher", "organization"]);
+  const location = extractLocation(metadata);
+  const year = extractYear(extractFirstString(metadata, ["publishedAt", "year", "date"])) ?? undefined;
+  const doi = extractFirstString(metadata, ["doi", "DOI"]);
+  const url = extractFirstString(metadata, ["url", "URL", "link"]);
 
   const authors = formatVancouverAuthors(metadata.authors ?? metadata.author);
 
@@ -236,8 +551,24 @@ function formatVancouverBibliography(entry: ExportContext["ledgerEntries"][numbe
     title,
   ];
 
-  if (journal) {
-    parts.push(journal);
+  if (kind === "article" && container) {
+    parts.push(container);
+  } else if (kind === "conference") {
+    if (container) {
+      parts.push(container);
+    }
+    if (location) {
+      parts.push(location);
+    }
+  } else if (kind === "book") {
+    if (publisher) {
+      parts.push(publisher);
+    }
+    if (location) {
+      parts.push(location);
+    }
+  } else if (container) {
+    parts.push(container);
   }
 
   if (year) {
@@ -305,22 +636,27 @@ function ledgerEntryToCsl(entry: ExportContext["ledgerEntries"][number]) {
 
   const authors = normalizeAuthors(metadata.authors ?? metadata.author);
   const issued = normalizeIssued(metadata.publishedAt ?? metadata.year);
-
-  const itemType = typeof metadata.type === "string" ? metadata.type : "article-journal";
+  const kind = determineWorkKind(metadata);
+  const itemType = extractFirstString(metadata, ["type"]) ?? mapWorkKindToCsl(kind);
+  const container = extractContainerTitle(metadata);
+  const publisher = extractFirstString(metadata, ["publisher", "organization"]);
+  const publisherPlace = extractLocation(metadata);
 
   return {
     id: entry.citationKey,
     type: itemType,
     title: typeof metadata.title === "string" ? metadata.title : entry.citationKey,
     author: authors,
-    "container-title": typeof metadata.journal === "string" ? metadata.journal : undefined,
+    "container-title": container,
+    "collection-title": kind === "conference" ? container : undefined,
     issued,
     volume: typeof metadata.volume === "string" ? metadata.volume : undefined,
     issue: typeof metadata.issue === "string" ? metadata.issue : undefined,
     page: typeof metadata.pages === "string" ? metadata.pages : undefined,
     DOI: typeof metadata.doi === "string" ? metadata.doi : undefined,
     URL: typeof metadata.url === "string" ? metadata.url : undefined,
-    publisher: typeof metadata.publisher === "string" ? metadata.publisher : undefined,
+    publisher: publisher,
+    "publisher-place": publisherPlace,
   };
 }
 
