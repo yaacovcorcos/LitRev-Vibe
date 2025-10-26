@@ -215,6 +215,17 @@ function extractFirstString(metadata: Record<string, unknown>, keys: string[]): 
   return undefined;
 }
 
+function extractFirstValue(metadata: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    const value = metadata[key];
+    if (value !== undefined && value !== null) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
 function extractIdentifier(metadata: Record<string, unknown>, keys: string[]): string | null {
   return extractFirstString(metadata, keys) ?? null;
 }
@@ -240,7 +251,7 @@ function determineWorkKind(metadata: Record<string, unknown>): WorkKind {
     return "article";
   }
 
-  if (extractFirstString(metadata, ["bookTitle", "book_title", "conference", "conferenceName", "event"])) {
+  if (extractFirstString(metadata, ["bookTitle", "book_title", "proceedings-title", "conference", "conferenceName", "event"])) {
     return "conference";
   }
 
@@ -285,6 +296,7 @@ function extractContainerTitle(metadata: Record<string, unknown>): string | unde
     "container",
     "bookTitle",
     "book_title",
+    "proceedings-title",
     "collectionTitle",
     "collection_title",
     "conference",
@@ -311,7 +323,7 @@ function formatLedgerSummary(metadata: Record<string, unknown>) {
   const container = extractContainerTitle(metadata);
   const publisher = extractFirstString(metadata, ["publisher", "organization"]);
   const location = extractLocation(metadata);
-  const year = extractYear(extractFirstString(metadata, ["publishedAt", "year", "date"])) ?? undefined;
+  const year = extractYear(extractFirstValue(metadata, ["publishedAt", "year", "date"])) ?? undefined;
 
   if (kind === "article") {
     if (container) {
@@ -448,7 +460,7 @@ function buildBibtexRecord(entry: ExportContext["ledgerEntries"][number], index:
     fields.set("pages", pages);
   }
 
-  const year = extractYear(extractFirstString(metadata, ["publishedAt", "year", "date"])) ?? undefined;
+  const year = extractYear(extractFirstValue(metadata, ["publishedAt", "year", "date"])) ?? undefined;
   if (year) {
     fields.set("year", String(year));
   }
@@ -536,12 +548,26 @@ function formatVancouverBibliography(entry: ExportContext["ledgerEntries"][numbe
   const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
   const title = typeof metadata.title === "string" ? metadata.title : entry.citationKey;
   const kind = determineWorkKind(metadata);
-  const container = extractContainerTitle(metadata);
   const publisher = extractFirstString(metadata, ["publisher", "organization"]);
   const location = extractLocation(metadata);
-  const year = extractYear(extractFirstString(metadata, ["publishedAt", "year", "date"])) ?? undefined;
+  const year = extractYear(extractFirstValue(metadata, ["publishedAt", "year", "date"])) ?? undefined;
   const doi = extractFirstString(metadata, ["doi", "DOI"]);
   const url = extractFirstString(metadata, ["url", "URL", "link"]);
+
+  let containerTitle = extractContainerTitle(metadata);
+  let eventTitle: string | undefined;
+
+  if (kind === "conference") {
+    containerTitle = extractFirstString(metadata, [
+      "bookTitle",
+      "book_title",
+      "proceedings-title",
+      "containerTitle",
+      "container_title",
+      "container",
+    ]) ?? containerTitle;
+    eventTitle = extractFirstString(metadata, ["conference", "conferenceName", "event"]);
+  }
 
   const authors = formatVancouverAuthors(metadata.authors ?? metadata.author);
 
@@ -551,11 +577,14 @@ function formatVancouverBibliography(entry: ExportContext["ledgerEntries"][numbe
     title,
   ];
 
-  if (kind === "article" && container) {
-    parts.push(container);
+  if (kind === "article" && containerTitle) {
+    parts.push(containerTitle);
   } else if (kind === "conference") {
-    if (container) {
-      parts.push(container);
+    if (eventTitle) {
+      parts.push(eventTitle);
+    }
+    if (containerTitle) {
+      parts.push(containerTitle);
     }
     if (location) {
       parts.push(location);
@@ -567,8 +596,8 @@ function formatVancouverBibliography(entry: ExportContext["ledgerEntries"][numbe
     if (location) {
       parts.push(location);
     }
-  } else if (container) {
-    parts.push(container);
+  } else if (containerTitle) {
+    parts.push(containerTitle);
   }
 
   if (year) {
@@ -638,17 +667,31 @@ function ledgerEntryToCsl(entry: ExportContext["ledgerEntries"][number]) {
   const issued = normalizeIssued(metadata.publishedAt ?? metadata.year);
   const kind = determineWorkKind(metadata);
   const itemType = extractFirstString(metadata, ["type"]) ?? mapWorkKindToCsl(kind);
-  const container = extractContainerTitle(metadata);
   const publisher = extractFirstString(metadata, ["publisher", "organization"]);
   const publisherPlace = extractLocation(metadata);
+
+  let containerTitle = extractContainerTitle(metadata);
+  let eventTitle: string | undefined;
+
+  if (kind === "conference") {
+    containerTitle = extractFirstString(metadata, [
+      "bookTitle",
+      "book_title",
+      "proceedings-title",
+      "containerTitle",
+      "container_title",
+      "container",
+    ]) ?? containerTitle;
+    eventTitle = extractFirstString(metadata, ["conference", "conferenceName", "event"]);
+  }
 
   return {
     id: entry.citationKey,
     type: itemType,
     title: typeof metadata.title === "string" ? metadata.title : entry.citationKey,
     author: authors,
-    "container-title": container,
-    "collection-title": kind === "conference" ? container : undefined,
+    "container-title": containerTitle,
+    "event-title": eventTitle,
     issued,
     volume: typeof metadata.volume === "string" ? metadata.volume : undefined,
     issue: typeof metadata.issue === "string" ? metadata.issue : undefined,

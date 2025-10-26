@@ -102,6 +102,29 @@ const BOOK_ENTRY: ExportContext["ledgerEntries"][number] = {
   keptAt: generatedAt,
 };
 
+const ARTICLE_NUMERIC_YEAR_ENTRY: ExportContext["ledgerEntries"][number] = {
+  id: "entry_numeric",
+  citationKey: "garcia2018",
+  metadata: {
+    type: "article-journal",
+    title: "Population health determinants",
+    journal: "Global Health",
+    year: 2018,
+    doi: "10.2000/gh.2018.12",
+    authors: [{ given: "Lucia", family: "Garcia" }],
+  },
+  locators: [
+    {
+      page: 12,
+      note: "Baseline metrics",
+    },
+  ],
+  integrityNotes: null,
+  importedFrom: "crossref",
+  verifiedByHuman: true,
+  keptAt: generatedAt,
+};
+
 function buildContext(overrides: Partial<ExportContext> = {}): ExportContext {
   return {
     project: {
@@ -213,6 +236,36 @@ describe("export adapters", () => {
     expect(output).toContain("**brown2019** — Evidence-Based Practice Handbook (MedPress, Boston, MA, 2019)");
   });
 
+  it("preserves numeric year metadata across exports", async () => {
+    const markdownAdapter = getExportAdapter("markdown");
+    const bibtexAdapter = getExportAdapter("bibtex");
+    const docxAdapter = getExportAdapter("docx");
+    expect(markdownAdapter && bibtexAdapter && docxAdapter).toBeTruthy();
+
+    const context = buildContext({ ledgerEntries: [ARTICLE_NUMERIC_YEAR_ENTRY] });
+
+    const markdownArtifact = await markdownAdapter!.generate(context, {
+      includeLedger: true,
+      includePrismaDiagram: false,
+    });
+    expect(markdownArtifact.data).toContain("(Global Health, 2018)");
+
+    const bibtexArtifact = await bibtexAdapter!.generate(context, {
+      includeLedger: true,
+      includePrismaDiagram: false,
+    });
+    expect(bibtexArtifact.data).toContain("year = {2018}");
+
+    const docxArtifact = await docxAdapter!.generate(context, {
+      includeLedger: true,
+      includePrismaDiagram: false,
+    });
+    const zip = await JSZip.loadAsync(docxArtifact.data as Buffer);
+    const xml = await zip.file("word/document.xml")?.async("string");
+    expect(xml).toBeTruthy();
+    expect(xml).toContain("2018");
+  });
+
   it("generates a DOCX artifact with references when enabled", async () => {
     const adapter = getExportAdapter("docx");
     expect(adapter).toBeTruthy();
@@ -246,6 +299,16 @@ describe("export adapters", () => {
     const zipWithout = await JSZip.loadAsync(withoutLedger.data as Buffer);
     const xmlWithout = await zipWithout.file("word/document.xml")?.async("string");
     expect(xmlWithout).not.toContain("References");
+
+    const conferenceContext = buildContext({ ledgerEntries: [ARTICLE_ENTRY, CONFERENCE_ENTRY] });
+    const conferenceDoc = await adapter!.generate(conferenceContext, {
+      includeLedger: true,
+      includePrismaDiagram: false,
+    });
+    const conferenceZip = await JSZip.loadAsync(conferenceDoc.data as Buffer);
+    const conferenceXml = await conferenceZip.file("word/document.xml")?.async("string");
+    expect(conferenceXml).toBeTruthy();
+    expect(conferenceXml).toContain("AI in Medicine Symposium");
   });
 
   it("formats references according to the configured citation style", async () => {
