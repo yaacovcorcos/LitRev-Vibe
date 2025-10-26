@@ -574,7 +574,11 @@ function parseExportManifest(options: Record<string, unknown> | null | undefined
   };
 }
 
-function deriveBooleanOption(options: Record<string, unknown>, keys: string[]): boolean | null {
+function deriveBooleanOption(options: Record<string, unknown> | null | undefined, keys: string[]): boolean | null {
+  if (!options || typeof options !== "object") {
+    return null;
+  }
+
   for (const key of keys) {
     const value = options[key];
     if (typeof value === "boolean") {
@@ -649,8 +653,8 @@ function deriveErrorMessage(value: unknown): string | null {
     return value;
   }
 
-  if (typeof value === "object" && value && "message" in value && typeof (value as { message?: unknown }).message === "string") {
-    return String((value as { message: string }).message);
+  if (typeof value === "object" && value && "message" in value && typeof value.message === "string") {
+    return value.message;
   }
 
   return "Export failed.";
@@ -832,7 +836,12 @@ function TimelineEntryItem({ entry }: { entry: TimelineEntry }) {
             {entry.completedAt ? ` • Finished ${format(entry.completedAt, "PPpp")}` : ""}
           </span>
           {entry.downloadUrl ? (
-            <Button asChild size="sm" variant="secondary">
+            <Button
+              asChild
+              size="sm"
+              variant="secondary"
+              title="Download manuscript, bibliography, and PRISMA diagram"
+            >
               <Link href={entry.downloadUrl} prefetch={false}>
                 <ArrowDownToLine className="mr-2 h-4 w-4" /> Download bundle
               </Link>
