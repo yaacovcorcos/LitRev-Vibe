@@ -20,11 +20,21 @@ const exportSettingsSchema = z
 
 export type ExportSettings = z.infer<typeof exportSettingsSchema>;
 
+const homeSettingsSchema = z
+  .object({
+    pinned: z.boolean(),
+  })
+  .partial()
+  .strip();
+
+export type HomeSettings = z.infer<typeof homeSettingsSchema>;
+
 const projectSettingsSchema = z
   .object({
     locatorPolicy: z.enum(locatorPolicies),
     citationStyle: z.enum(citationStyles),
     exports: exportSettingsSchema,
+    home: homeSettingsSchema.optional(),
   })
   .strip();
 
@@ -39,6 +49,9 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
     includePrismaDiagram: true,
     includeLedgerExport: true,
   },
+  home: {
+    pinned: false,
+  },
 };
 
 export const projectSettingsPatchSchema = z
@@ -46,6 +59,7 @@ export const projectSettingsPatchSchema = z
     locatorPolicy: z.enum(locatorPolicies).optional(),
     citationStyle: z.enum(citationStyles).optional(),
     exports: exportSettingsSchema.partial().optional(),
+    home: homeSettingsSchema.optional(),
   })
   .strip();
 
@@ -81,6 +95,16 @@ function mergeExportSettings(
   };
 }
 
+function mergeHomeSettings(base: HomeSettings = { pinned: false }, patch?: HomeSettings): HomeSettings {
+  if (!patch) {
+    return { ...base };
+  }
+
+  return {
+    pinned: patch.pinned ?? base.pinned ?? false,
+  };
+}
+
 export function mergeProjectSettings(
   patch: ProjectSettingsPatch | undefined,
   base: ProjectSettings = DEFAULT_PROJECT_SETTINGS,
@@ -91,6 +115,7 @@ export function mergeProjectSettings(
     locatorPolicy: cleanPatch.locatorPolicy ?? base.locatorPolicy,
     citationStyle: cleanPatch.citationStyle ?? base.citationStyle,
     exports: mergeExportSettings(base.exports, cleanPatch.exports),
+    home: mergeHomeSettings(base.home, cleanPatch.home),
   };
 }
 

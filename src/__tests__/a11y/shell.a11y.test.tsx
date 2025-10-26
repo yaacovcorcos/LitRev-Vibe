@@ -132,7 +132,7 @@ describe("Workspace shell accessibility", () => {
 
     const { container } = renderWithinShell(<HomePage />);
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /workspace scaffolding/i })).toBeInTheDocument(),
+      expect(screen.getByRole("heading", { name: /global workspace/i })).toBeInTheDocument(),
     );
 
     const results = await axe(container);
