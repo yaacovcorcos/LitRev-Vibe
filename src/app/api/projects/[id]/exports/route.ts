@@ -127,6 +127,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       jobId: record.jobId,
       createdAt: record.createdAt,
       completedAt: record.completedAt,
+      durationMs:
+        record.completedAt && record.createdAt
+          ? Math.max(0, record.completedAt.getTime() - record.createdAt.getTime())
+          : null,
       job: record.job ?? null,
       error: record.error,
     })),

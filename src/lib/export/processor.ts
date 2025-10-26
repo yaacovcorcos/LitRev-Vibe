@@ -144,7 +144,8 @@ type ArchiveManifest = {
   generatedAt: string;
   includeLedger: boolean;
   includePrismaDiagram: boolean;
-  files: Array<{ name: string; contentType: string }>;
+  totalSizeBytes: number;
+  files: Array<{ name: string; contentType: string; sizeBytes: number }>;
 };
 
 export async function buildExportArchive({ context, payload, primaryArtifact }: BuildArchiveInput) {
@@ -152,10 +153,11 @@ export async function buildExportArchive({ context, payload, primaryArtifact }: 
   const files: Array<{ name: string; contentType: string; data: Buffer }> = [];
 
   const primaryName = filenameForFormat(payload.format, primaryArtifact.extension ?? payload.format);
+  const primaryBuffer = toBuffer(primaryArtifact.data);
   files.push({
     name: `manuscript/${primaryName}`,
     contentType: primaryArtifact.contentType,
-    data: toBuffer(primaryArtifact.data),
+    data: primaryBuffer,
   });
 
   if (payload.includeLedger) {
@@ -165,20 +167,22 @@ export async function buildExportArchive({ context, payload, primaryArtifact }: 
         includeLedger: true,
         includePrismaDiagram: payload.includePrismaDiagram,
       });
+      const bibliographyBuffer = toBuffer(bibliography.data);
       files.push({
         name: `attachments/bibliography.${bibliography.extension ?? "bib"}`,
         contentType: bibliography.contentType,
-        data: toBuffer(bibliography.data),
+        data: bibliographyBuffer,
       });
     }
   }
 
   if (payload.includePrismaDiagram) {
     const svg = buildPrismaDiagramSvg(context.metrics);
+    const prismaBuffer = Buffer.from(svg, "utf-8");
     files.push({
       name: "attachments/prisma-diagram.svg",
       contentType: "image/svg+xml",
-      data: Buffer.from(svg, "utf-8"),
+      data: prismaBuffer,
     });
   }
 
@@ -187,7 +191,12 @@ export async function buildExportArchive({ context, payload, primaryArtifact }: 
     generatedAt: context.generatedAt.toISOString(),
     includeLedger: payload.includeLedger,
     includePrismaDiagram: payload.includePrismaDiagram,
-    files: files.map((file) => ({ name: file.name, contentType: file.contentType })),
+    totalSizeBytes: files.reduce((total, file) => total + file.data.byteLength, 0),
+    files: files.map((file) => ({
+      name: file.name,
+      contentType: file.contentType,
+      sizeBytes: file.data.byteLength,
+    })),
   };
 
   zip.file("manifest.json", JSON.stringify(manifest, null, 2));
