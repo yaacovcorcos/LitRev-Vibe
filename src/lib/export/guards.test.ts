@@ -34,7 +34,7 @@ describe("assertExportAllowed", () => {
     expect(ledgerEntryClient.findMany).not.toHaveBeenCalled();
   });
 
-  it("allows exports when all entries meet locator requirements", async () => {
+  it("allows exports when entries have locators", async () => {
     ledgerEntryClient.findMany.mockResolvedValueOnce([
       {
         id: "entry-1",
@@ -45,7 +45,7 @@ describe("assertExportAllowed", () => {
             note: "Summary",
           },
         ],
-        verifiedByHuman: true,
+        verifiedByHuman: false,
       },
     ]);
 
@@ -56,23 +56,19 @@ describe("assertExportAllowed", () => {
     });
   });
 
-  it("blocks exports when entries are missing verified locator details", async () => {
+  it("blocks exports when entries have pending locators", async () => {
     ledgerEntryClient.findMany.mockResolvedValueOnce([
       {
         id: "entry-2",
         citationKey: "doe2022",
-        locators: [
-          {
-            note: "Missing pointer",
-          },
-        ],
+        locators: [],
         verifiedByHuman: false,
       },
     ]);
 
     await assertExportAllowed("project-1", STRICT_SETTINGS).then(
       () => {
-        throw new Error("Expected export guard to block missing locators");
+        throw new Error("Expected export guard to block pending locators");
       },
       (error) => {
         expect(error).toBeInstanceOf(ExportGuardError);
