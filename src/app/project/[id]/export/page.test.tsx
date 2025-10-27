@@ -208,6 +208,27 @@ describe("ProjectExportPage history timeline", () => {
     expect(progressBar).toHaveStyle({ width: "45%" });
   });
 
+  it("renders PRISMA preview with metrics and download link", () => {
+    useExportHistoryMock.mockReturnValue({
+      data: { exports: [] },
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    });
+
+    render(<ProjectExportPage />);
+
+    const downloadLinks = screen.getAllByRole("link", { name: /download svg/i });
+    expect(downloadLinks.length).toBeGreaterThan(0);
+    downloadLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/api/projects/project-123/exports/prisma-diagram");
+    });
+
+    expect(screen.getAllByText(/^identified$/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("150").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/prisma flow diagram/i).length).toBeGreaterThan(0);
+  });
+
   it("renders empty state when no exports exist", () => {
     useExportHistoryMock.mockReturnValue({
       data: { exports: [] },
@@ -218,6 +239,6 @@ describe("ProjectExportPage history timeline", () => {
 
     render(<ProjectExportPage />);
 
-    expect(screen.getByText(/no exports yet/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/no exports yet/i).length).toBeGreaterThan(0);
   });
 });

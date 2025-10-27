@@ -89,7 +89,7 @@ export function buildPrismaDiagramSvg(metrics: PrismaFlowMetrics, options: Diagr
 }
 
 function renderNode(node: Node) {
-  const label = `${node.value.toLocaleString()}`;
+  const label = `${node.value.toLocaleString("en-US")}`;
   const subtitle = node.subtitle ? `<tspan x="${node.x + BOX_WIDTH / 2}" dy="18" class="subtitle">${escapeXml(node.subtitle)}</tspan>` : "";
 
   return `<g>
