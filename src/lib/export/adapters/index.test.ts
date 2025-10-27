@@ -342,22 +342,14 @@ describe("export adapters", () => {
     expect(xml).not.toContain("Smith, J. A. (2021)");
   });
 
-  it("matches DOCX APA golden fixture", async () => {
-    const context = buildContext();
-    const xml = await renderNormalizedDocx(context, {
-      includeLedger: true,
-      includePrismaDiagram: false,
-    });
-
-    const fixture = await readFixture("docx-apa.xml");
-    expect(xml).toBe(fixture);
-  });
-
-  it("matches DOCX Vancouver golden fixture", async () => {
+  it.each([
+    { style: "apa" as const, fixtureName: "docx-apa.xml" },
+    { style: "vancouver" as const, fixtureName: "docx-vancouver.xml" },
+  ])("matches DOCX %s golden fixture", async ({ style, fixtureName }) => {
     const context = buildContext();
     context.project.settings = {
       ...context.project.settings,
-      citationStyle: "vancouver",
+      citationStyle: style,
     };
 
     const xml = await renderNormalizedDocx(context, {
@@ -365,7 +357,7 @@ describe("export adapters", () => {
       includePrismaDiagram: false,
     });
 
-    const fixture = await readFixture("docx-vancouver.xml");
+    const fixture = await readFixture(fixtureName);
     expect(xml).toBe(fixture);
   });
 });
@@ -397,8 +389,7 @@ async function readFixture(name: string) {
 function normalizeDocxXml(xml: string) {
   return xml
     .replace(/\r?\n/g, "")
-    .replace(/\s+/g, " ")
-    .replace(/> </g, "><")
+    .replace(/>\s+</g, "><")
     .replace(/ w:rsidRDefault="[^"]*"/g, "")
     .replace(/ w:rsidR="[^"]*"/g, "")
     .replace(/ w:rsidP="[^"]*"/g, "")
