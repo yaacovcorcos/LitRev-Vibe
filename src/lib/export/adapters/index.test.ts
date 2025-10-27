@@ -1,8 +1,17 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const FIXTURE_DIR = path.join(__dirname, "__fixtures__");
+
+
 import { DEFAULT_PROJECT_SETTINGS } from "@/lib/projects/settings";
-import { getExportAdapter } from "@/lib/export/adapters";
+import { getExportAdapter, type ExportAdapter } from "@/lib/export/adapters";
 import type { ExportContext } from "@/lib/export/context";
 
 const generatedAt = new Date("2024-01-01T00:00:00Z");
@@ -332,4 +341,57 @@ describe("export adapters", () => {
     expect(xml).toMatch(/1\.[^<]*Smith JA/);
     expect(xml).not.toContain("Smith, J. A. (2021)");
   });
+
+  it.each([
+    { style: "apa" as const, fixtureName: "docx-apa.xml" },
+    { style: "vancouver" as const, fixtureName: "docx-vancouver.xml" },
+  ])("matches DOCX %s golden fixture", async ({ style, fixtureName }) => {
+    const context = buildContext();
+    context.project.settings = {
+      ...context.project.settings,
+      citationStyle: style,
+    };
+
+    const xml = await renderNormalizedDocx(context, {
+      includeLedger: true,
+      includePrismaDiagram: false,
+    });
+
+    const fixture = await readFixture(fixtureName);
+    expect(xml).toBe(fixture);
+  });
 });
+
+async function renderNormalizedDocx(
+  context: ExportContext,
+  options: Parameters<ExportAdapter["generate"]>[1],
+) {
+  const adapter = getExportAdapter("docx");
+  if (!adapter) {
+    throw new Error("DOCX adapter missing");
+  }
+
+  const artifact = await adapter.generate(context, options);
+  const zip = await JSZip.loadAsync(artifact.data as Buffer);
+  const xml = await zip.file("word/document.xml")?.async("string");
+  if (!xml) {
+    throw new Error("DOCX document.xml missing");
+  }
+
+  return normalizeDocxXml(xml);
+}
+
+async function readFixture(name: string) {
+  const filePath = path.join(FIXTURE_DIR, name);
+  return (await readFile(filePath, "utf-8")).trim();
+}
+
+function normalizeDocxXml(xml: string) {
+  return xml
+    .replace(/\r?\n/g, "")
+    .replace(/>\s+</g, "><")
+    .replace(/ w:rsidRDefault="[^"]*"/g, "")
+    .replace(/ w:rsidR="[^"]*"/g, "")
+    .replace(/ w:rsidP="[^"]*"/g, "")
+    .trim();
+}
