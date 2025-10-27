@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { ProjectSettings } from "@/lib/projects/settings";
-import { entryMeetsLocatorRequirements } from "@/lib/ledger/locator-readiness";
+import { determineLocatorStatus } from "@/lib/ledger/status";
 
 export class ExportGuardError extends Error {
   constructor(message: string) {
@@ -24,24 +24,25 @@ export async function assertExportAllowed(projectId: string, settings: ProjectSe
     },
   });
 
-  const violations = entries.filter((entry) =>
-    !entryMeetsLocatorRequirements({
+  const pending = entries.filter((entry) => {
+    const status = determineLocatorStatus({
       locators: entry.locators,
       verifiedByHuman: entry.verifiedByHuman,
-    }),
-  );
+    });
+    return status === "pending_locator";
+  });
 
-  if (violations.length === 0) {
+  if (pending.length === 0) {
     return;
   }
 
-  const sample = violations
+  const sample = pending
     .slice(0, 3)
     .map((entry) => entry.citationKey || entry.id)
     .join(", ");
-  const remainder = violations.length > 3 ? ` and ${violations.length - 3} others` : "";
+  const remainder = pending.length > 3 ? ` and ${pending.length - 3} others` : "";
 
   throw new ExportGuardError(
-    `Cannot export until locators are verified for: ${sample}${remainder}. Add locator pointers, curator context, and mark them as verified or relax the locator policy.`,
+    `Cannot export while locators are missing for: ${sample}${remainder}. Add locator details or relax the locator policy to allow pending entries.`,
   );
 }
